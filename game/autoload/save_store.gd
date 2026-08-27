@@ -61,7 +61,7 @@ func load_data(path_override: String = "") -> Dictionary:
 
 func _has_current_version(data: Dictionary) -> bool:
 	var version: Variant = data.get("version")
-	return (typeof(version) == TYPE_INT or typeof(version) == TYPE_FLOAT) and int(version) == CURRENT_VERSION
+	return (typeof(version) == TYPE_INT or typeof(version) == TYPE_FLOAT) and version == CURRENT_VERSION
 
 func _default_data() -> Dictionary:
 	return DEFAULT_DATA.duplicate(true)

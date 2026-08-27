@@ -22,7 +22,7 @@ func _init() -> void:
 		return
 
 	var store: Node = save_store_script.new()
-	var passed := _test_round_trip(store) and _test_missing_save_uses_defaults(store) and _test_unsupported_version_uses_defaults(store) and _test_failed_promotion_preserves_existing_save(store) and _test_start_mode_selects_requested_mode_and_level() and _test_autoloads_are_registered()
+	var passed := _test_round_trip(store) and _test_missing_save_uses_defaults(store) and _test_unsupported_version_uses_defaults(store) and _test_fractional_version_uses_defaults(store) and _test_failed_promotion_preserves_existing_save(store) and _test_start_mode_selects_requested_mode_and_level() and _test_autoloads_are_registered()
 	store.free()
 	if not passed:
 		quit(1)
@@ -55,6 +55,16 @@ func _test_unsupported_version_uses_defaults(store: Node) -> bool:
 	_cleanup(path)
 	if result != OK or loaded != DEFAULT_DATA:
 		push_error("unsupported save version did not return defaults")
+		return false
+	return true
+
+func _test_fractional_version_uses_defaults(store: Node) -> bool:
+	var path := "user://test-save-store-fractional-version.json"
+	var result: Error = store.save_data({"version": 1.5}, path)
+	var loaded: Dictionary = store.load_data(path)
+	_cleanup(path)
+	if result != OK or loaded != DEFAULT_DATA:
+		push_error("fractional save version did not return defaults")
 		return false
 	return true
 
