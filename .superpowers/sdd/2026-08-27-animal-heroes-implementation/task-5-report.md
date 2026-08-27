@@ -41,3 +41,17 @@ The required ten-minute interactive desktop smoke was not performed in this head
 - GREEN: the complete `test_local_arena.gd` integration script exited 0 after the changes.
 
 The ten-minute interactive desktop smoke remains unverified in this headless environment.
+
+## Fix Round 2
+
+### Root cause
+
+`_ray_to_inset_edge()` short-circuited whenever the local screen point was outside the inset. That finite clamp is correct only for a forward ray with no inset hit; it discards crossing rays and can place the marker off the local-to-partner line.
+
+### RED / GREEN evidence
+
+- Added focused crossing and outward cases for all four outer side bands and all four outer corners. Crossing cases require a finite, forward, collinear point on the bounded inset edge; outward no-hit cases require the finite clamped fallback.
+- RED: `GODOT_BIN="$PWD/.tools/godot-4.7.2-task5/Godot_v4.7.2-stable_linux.x86_64"; "$GODOT_BIN" --headless --path game -s res://tests/integration/test_local_arena.gd -- --case=indicator` exited 1 with `outside-inset left band crossing ray must yield a finite, forward, collinear inset-edge intersection` when the prior early outside-inset clamp was restored.
+- GREEN: the identical focused command exited 0 with the early clamp removed. The implementation now evaluates all finite side-segment candidates with `t >= 0`, selects the earliest hit (entry outside, exit inside), and uses `from.clamp(inset)` only if no forward hit exists.
+
+The ten-minute interactive desktop smoke remains unverified in this headless environment.

@@ -246,17 +246,37 @@ func _test_partner_indicator(arena: Node, viewport_size: Vector2i) -> bool:
 		indicator.update_for_world_positions(canvas_inverse * Vector2(300, 300), canvas_inverse * screen_position)
 		if indicator.visible:
 			return _fail("indicator must hide for a partner anywhere in the full viewport, including its margins")
-	for entry in [
-		[Vector2(10, viewport_size.y * 0.5), Vector2(-100, viewport_size.y * 0.5), Vector2(indicator.inset, viewport_size.y * 0.5)],
-		[Vector2(viewport_size.x - 10, viewport_size.y * 0.5), Vector2(viewport_size.x + 100, viewport_size.y * 0.5), Vector2(viewport_size.x - indicator.inset, viewport_size.y * 0.5)],
-		[Vector2(viewport_size.x * 0.5, 10), Vector2(viewport_size.x * 0.5, -100), Vector2(viewport_size.x * 0.5, indicator.inset)],
-		[Vector2(viewport_size.x * 0.5, viewport_size.y - 10), Vector2(viewport_size.x * 0.5, viewport_size.y + 100), Vector2(viewport_size.x * 0.5, viewport_size.y - indicator.inset)],
-		[Vector2(10, 10), Vector2(-100, -100), Vector2(indicator.inset, indicator.inset)],
-		[Vector2(viewport_size.x - 10, viewport_size.y - 10), Vector2(viewport_size.x + 100, viewport_size.y + 100), Vector2(viewport_size.x - indicator.inset, viewport_size.y - indicator.inset)],
-	]:
+	var inset_bounds := Rect2(Vector2(indicator.inset, indicator.inset), Vector2(viewport_size) - Vector2(indicator.inset * 2.0, indicator.inset * 2.0))
+	var crossing_cases := [
+		[Vector2(10, 300), Vector2(viewport_size.x + 100, 500), "left band"],
+		[Vector2(viewport_size.x - 10, 300), Vector2(-100, 500), "right band"],
+		[Vector2(300, 10), Vector2(500, viewport_size.y + 100), "top band"],
+		[Vector2(300, viewport_size.y - 10), Vector2(500, -100), "bottom band"],
+		[Vector2(10, 10), Vector2(viewport_size.x + 100, viewport_size.y + 100), "top-left corner"],
+		[Vector2(viewport_size.x - 10, 10), Vector2(-100, viewport_size.y + 100), "top-right corner"],
+		[Vector2(10, viewport_size.y - 10), Vector2(viewport_size.x + 100, -100), "bottom-left corner"],
+		[Vector2(viewport_size.x - 10, viewport_size.y - 10), Vector2(-100, -100), "bottom-right corner"],
+	]
+	for entry in crossing_cases:
 		indicator.update_for_world_positions(canvas_inverse * entry[0], canvas_inverse * entry[1])
-		if not indicator.visible or not indicator.position.is_finite() or indicator.position.distance_to(entry[2]) > 0.01:
-			return _fail("a local hero outside the inset must still produce a finite marker on the correct inset edge")
+		var crossing: Vector2 = indicator.position
+		var direction: Vector2 = entry[1] - entry[0]
+		if not indicator.visible or not crossing.is_finite() or not _point_on_inset_edge(crossing, inset_bounds) or absf((crossing - entry[0]).cross(direction)) > 1.0 or (crossing - entry[0]).dot(direction) < -0.01:
+			return _fail("outside-inset %s crossing ray must yield a finite, forward, collinear inset-edge intersection" % entry[2])
+	var outward_cases := [
+		[Vector2(10, 300), Vector2(-100, 320), "left band"],
+		[Vector2(viewport_size.x - 10, 300), Vector2(viewport_size.x + 100, 320), "right band"],
+		[Vector2(300, 10), Vector2(320, -100), "top band"],
+		[Vector2(300, viewport_size.y - 10), Vector2(320, viewport_size.y + 100), "bottom band"],
+		[Vector2(10, 10), Vector2(-100, -100), "top-left corner"],
+		[Vector2(viewport_size.x - 10, 10), Vector2(viewport_size.x + 100, -100), "top-right corner"],
+		[Vector2(10, viewport_size.y - 10), Vector2(-100, viewport_size.y + 100), "bottom-left corner"],
+		[Vector2(viewport_size.x - 10, viewport_size.y - 10), Vector2(viewport_size.x + 100, viewport_size.y + 100), "bottom-right corner"],
+	]
+	for entry in outward_cases:
+		indicator.update_for_world_positions(canvas_inverse * entry[0], canvas_inverse * entry[1])
+		if not indicator.visible or not indicator.position.is_finite() or indicator.position.distance_to(entry[0].clamp(inset_bounds.position, inset_bounds.end)) > 0.01:
+			return _fail("outside-inset %s ray that never intersects must use the finite clamped fallback" % entry[2])
 	indicator.update_for_world_positions(Vector2(300, 300), null)
 	if indicator.visible:
 		return _fail("indicator must hide when the partner is unavailable")
@@ -303,3 +323,9 @@ func _requested_case() -> String:
 		if argument.begins_with("--case="):
 			return argument.trim_prefix("--case=")
 	return ""
+
+
+func _point_on_inset_edge(point: Vector2, bounds: Rect2) -> bool:
+	var epsilon := 0.01
+	var inside_sides := point.x >= bounds.position.x - epsilon and point.x <= bounds.end.x + epsilon and point.y >= bounds.position.y - epsilon and point.y <= bounds.end.y + epsilon
+	return inside_sides and (absf(point.x - bounds.position.x) <= epsilon or absf(point.x - bounds.end.x) <= epsilon or absf(point.y - bounds.position.y) <= epsilon or absf(point.y - bounds.end.y) <= epsilon)

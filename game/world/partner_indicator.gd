@@ -41,24 +41,29 @@ func _ray_to_inset_edge(from: Vector2, toward: Vector2, bounds: Rect2) -> Vector
 	var direction := toward - from
 	if direction.length_squared() <= 0.000001:
 		return from.clamp(bounds.position, bounds.end)
-	if not _inside_bounds(from, bounds):
-		return from.clamp(bounds.position, bounds.end)
-	var intersections: Array[Vector2] = []
-	if direction.x > 0.0:
-		intersections.append(from + direction * ((bounds.end.x - from.x) / direction.x))
-	elif direction.x < 0.0:
-		intersections.append(from + direction * ((bounds.position.x - from.x) / direction.x))
-	if direction.y > 0.0:
-		intersections.append(from + direction * ((bounds.end.y - from.y) / direction.y))
-	elif direction.y < 0.0:
-		intersections.append(from + direction * ((bounds.position.y - from.y) / direction.y))
+	var candidates: Array[Dictionary] = []
+	if absf(direction.x) > 0.000001:
+		for side_x_value in [bounds.position.x, bounds.end.x]:
+			var side_x: float = side_x_value
+			var t: float = (side_x - from.x) / direction.x
+			var point: Vector2 = from + direction * t
+			if _valid_side_intersection(t, point, bounds):
+				candidates.append({"t": t, "point": point})
+	if absf(direction.y) > 0.000001:
+		for side_y_value in [bounds.position.y, bounds.end.y]:
+			var side_y: float = side_y_value
+			var t: float = (side_y - from.y) / direction.y
+			var point: Vector2 = from + direction * t
+			if _valid_side_intersection(t, point, bounds):
+				candidates.append({"t": t, "point": point})
 	var nearest: Variant = null
-	for candidate in intersections:
-		var travel := candidate - from
-		if travel.dot(direction) >= 0.0 and _inside_bounds(candidate, bounds):
-			if nearest == null or travel.length_squared() < (nearest as Vector2).distance_squared_to(from):
-				nearest = candidate
-	return nearest as Vector2 if nearest != null else from.clamp(bounds.position, bounds.end)
+	for candidate in candidates:
+		if nearest == null or candidate.t < nearest.t:
+			nearest = candidate
+	if nearest != null:
+		return nearest.point
+	# An outward ray that never meets the inset uses this explicit finite fallback.
+	return from.clamp(bounds.position, bounds.end)
 
 
 func _viewport_size() -> Vector2:
@@ -69,5 +74,6 @@ func _inside_full_viewport(point: Vector2, size: Vector2) -> bool:
 	return point.x >= 0.0 and point.x <= size.x and point.y >= 0.0 and point.y <= size.y
 
 
-func _inside_bounds(point: Vector2, bounds: Rect2) -> bool:
-	return point.x >= bounds.position.x and point.x <= bounds.end.x and point.y >= bounds.position.y and point.y <= bounds.end.y
+func _valid_side_intersection(t: float, point: Vector2, bounds: Rect2) -> bool:
+	var epsilon := 0.0001
+	return is_finite(t) and point.is_finite() and t >= 0.0 and point.x >= bounds.position.x - epsilon and point.x <= bounds.end.x + epsilon and point.y >= bounds.position.y - epsilon and point.y <= bounds.end.y + epsilon
