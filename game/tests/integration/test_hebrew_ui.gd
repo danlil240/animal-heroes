@@ -33,6 +33,8 @@ func _run() -> void:
 		return
 	if not await _test_tutorial_animation():
 		return
+	if not _test_tutorial_highlights():
+		return
 	if not await _test_simultaneous_touch_and_keyboard():
 		return
 	quit(0)
@@ -151,6 +153,35 @@ func _test_tutorial_animation() -> bool:
 	var after: Vector2 = tutorial.get_node("Demo/Hero").position
 	if before == after:
 		return _fail_bool("tutorial animation must visibly change hero position over time")
+	root.remove_child(tutorial)
+	tutorial.queue_free()
+	return true
+
+
+func _test_tutorial_highlights() -> bool:
+	var tutorial = load("res://ui/how_to_play.tscn").instantiate()
+	_prepare_layout(tutorial, Vector2(1024, 600))
+	root.add_child(tutorial)
+	tutorial.advance_demo(0.0)
+	var left: PanelContainer = tutorial.get_node("Demo/Controls/Left")
+	var right: PanelContainer = tutorial.get_node("Demo/Controls/Right")
+	var jump: PanelContainer = tutorial.get_node("Demo/Controls/Jump")
+	var action: PanelContainer = tutorial.get_node("Demo/Controls/Action")
+	var left_inactive := left.modulate
+	var right_inactive := right.modulate
+	var jump_inactive := jump.modulate
+	var action_inactive := action.modulate
+	tutorial.advance_demo(0.30)
+	if right.modulate == right_inactive:
+		return _fail_bool("tutorial right hint must visibly activate")
+	tutorial.advance_demo(0.50)
+	if jump.modulate == jump_inactive:
+		return _fail_bool("tutorial jump hint must visibly activate")
+	tutorial.advance_demo(0.65)
+	if left.modulate == left_inactive:
+		return _fail_bool("tutorial left hint must visibly activate")
+	if action.modulate == action_inactive:
+		return _fail_bool("tutorial action hint must visibly activate")
 	root.remove_child(tutorial)
 	tutorial.queue_free()
 	return true

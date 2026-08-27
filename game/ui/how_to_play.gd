@@ -18,6 +18,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	advance_demo(delta)
+
+
+func advance_demo(delta: float) -> void:
 	_elapsed = fmod(_elapsed + delta, CYCLE_SECONDS)
 	var phase := _elapsed / CYCLE_SECONDS
 	var direction := sin(phase * TAU)
