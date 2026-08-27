@@ -11,6 +11,11 @@ config_version=5
 
 config/name="Animal Heroes"
 
+[autoload]
+
+SaveStore="*res://autoload/save_store.gd"
+AppState="*res://autoload/app_state.gd"
+
 [display]
 
 window/size/viewport_width=1340
