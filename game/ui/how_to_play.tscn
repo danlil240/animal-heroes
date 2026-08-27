@@ -1,0 +1,125 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/how_to_play.gd" id="1_tutorial"]
+
+[node name="HowToPlay" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+layout_direction = 3
+script = ExtResource("1_tutorial")
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 28.0
+offset_bottom = 76.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "איך משחקים"
+horizontal_alignment = 1
+layout_direction = 3
+
+[node name="Demo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -370.0
+offset_top = -160.0
+offset_right = 370.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+layout_direction = 3
+
+[node name="Track" type="ColorRect" parent="Demo"]
+layout_mode = 0
+offset_left = 92.0
+offset_top = 178.0
+offset_right = 648.0
+offset_bottom = 186.0
+color = Color(0.32, 0.65, 0.38, 1)
+mouse_filter = 2
+
+[node name="Hero" type="ColorRect" parent="Demo"]
+layout_mode = 0
+offset_left = 310.0
+offset_top = 78.0
+offset_right = 374.0
+offset_bottom = 142.0
+color = Color(1, 0.61, 0.24, 1)
+mouse_filter = 2
+
+[node name="Controls" type="HBoxContainer" parent="Demo"]
+layout_mode = 0
+offset_left = 98.0
+offset_top = 222.0
+offset_right = 642.0
+offset_bottom = 302.0
+theme_override_constants/separation = 12
+alignment = 1
+layout_direction = 3
+
+[node name="Left" type="PanelContainer" parent="Demo/Controls"]
+custom_minimum_size = Vector2(120, 72)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Demo/Controls/Left"]
+layout_mode = 2
+text = "שמאלה"
+horizontal_alignment = 1
+vertical_alignment = 1
+layout_direction = 3
+
+[node name="Right" type="PanelContainer" parent="Demo/Controls"]
+custom_minimum_size = Vector2(120, 72)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Demo/Controls/Right"]
+layout_mode = 2
+text = "ימינה"
+horizontal_alignment = 1
+vertical_alignment = 1
+layout_direction = 3
+
+[node name="Jump" type="PanelContainer" parent="Demo/Controls"]
+custom_minimum_size = Vector2(120, 72)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Demo/Controls/Jump"]
+layout_mode = 2
+text = "קפיצה"
+horizontal_alignment = 1
+vertical_alignment = 1
+layout_direction = 3
+
+[node name="Action" type="PanelContainer" parent="Demo/Controls"]
+custom_minimum_size = Vector2(120, 72)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Demo/Controls/Action"]
+layout_mode = 2
+text = "פעולה"
+horizontal_alignment = 1
+vertical_alignment = 1
+layout_direction = 3
+
+[node name="Instruction" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -94.0
+offset_bottom = -42.0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 26
+text = "זזים ימינה ושמאלה"
+horizontal_alignment = 1
+layout_direction = 3
