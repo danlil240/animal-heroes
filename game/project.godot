@@ -1,0 +1,28 @@
+; Engine configuration file.
+; It is best edited using the editor and not directly.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Animal Heroes"
+
+[display]
+
+window/size/viewport_width=1340
+window/size/viewport_height=800
+window/stretch/mode="canvas_items"
+window/handheld/orientation=0
+
+[physics]
+
+common/physics_ticks_per_second=30
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
