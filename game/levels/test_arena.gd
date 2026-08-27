@@ -17,6 +17,7 @@ var _remote_keys := {"left": false, "right": false, "jump": false, "action": fal
 func _ready() -> void:
 	configure_local_role("rabbit")
 	$FallRespawn.body_entered.connect(_respawn_fallen_hero)
+	$Checkpoint.body_entered.connect(_activate_checkpoint)
 
 
 func _physics_process(_delta: float) -> void:
@@ -84,3 +85,10 @@ func _remote_hero():
 func _respawn_fallen_hero(body: Node2D) -> void:
 	if body.has_method("respawn"):
 		body.respawn(body.checkpoint_position)
+
+
+func _activate_checkpoint(body: Node2D) -> void:
+	if not body.has_method("respawn"):
+		return
+	for hero in [rabbit, fox]:
+		hero.checkpoint_position = $Checkpoint.global_position

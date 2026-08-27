@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://levels/test_arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -19,17 +19,23 @@ size = Vector2(1800, 120)
 [sub_resource type="RectangleShape2D" id="PlayerShape"]
 size = Vector2(32, 48)
 
+[sub_resource type="RectangleShape2D" id="CheckpointShape"]
+size = Vector2(72, 72)
+
 [node name="TestArena" type="Node2D"]
 script = ExtResource("1_arena")
 
 [node name="RabbitSpawn" type="Marker2D" parent="."]
-position = Vector2(260, 656)
+position = Vector2(80, 656)
 
 [node name="FoxSpawn" type="Marker2D" parent="."]
-position = Vector2(760, 656)
+position = Vector2(1120, 656)
 
-[node name="Checkpoint" type="Marker2D" parent="."]
-position = Vector2(260, 656)
+[node name="Checkpoint" type="Area2D" parent="."]
+position = Vector2(1200, 656)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Checkpoint"]
+shape = SubResource("CheckpointShape")
 
 [node name="Ground" type="StaticBody2D" parent="." groups=["arena_safe_ground"]]
 position = Vector2(670, 720)
@@ -42,7 +48,7 @@ polygon = PackedVector2Array(-800, -40, 800, -40, 800, 40, -800, 40)
 color = Color(0.22, 0.48, 0.25, 1)
 
 [node name="PlatformA" type="StaticBody2D" parent="." groups=["arena_platform"]]
-position = Vector2(310, 650)
+position = Vector2(350, 650)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformA"]
 shape = SubResource("PlatformShape")
@@ -52,7 +58,7 @@ polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
 color = Color(0.55, 0.31, 0.12, 1)
 
 [node name="PlatformB" type="StaticBody2D" parent="." groups=["arena_platform"]]
-position = Vector2(670, 650)
+position = Vector2(620, 650)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformB"]
 shape = SubResource("PlatformShape")
@@ -62,7 +68,7 @@ polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
 color = Color(0.55, 0.31, 0.12, 1)
 
 [node name="PlatformC" type="StaticBody2D" parent="." groups=["arena_platform"]]
-position = Vector2(1030, 650)
+position = Vector2(890, 650)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformC"]
 shape = SubResource("PlatformShape")
@@ -130,7 +136,7 @@ position = Vector2(670, 930)
 shape = SubResource("FallShape")
 
 [node name="Rabbit" type="CharacterBody2D" parent="."]
-position = Vector2(260, 656)
+position = Vector2(80, 656)
 script = ExtResource("2_player")
 profile = ExtResource("3_rabbit")
 
@@ -149,7 +155,7 @@ limit_right = 1600
 limit_bottom = 800
 
 [node name="Fox" type="CharacterBody2D" parent="."]
-position = Vector2(760, 656)
+position = Vector2(1120, 656)
 script = ExtResource("2_player")
 profile = ExtResource("4_fox")
 

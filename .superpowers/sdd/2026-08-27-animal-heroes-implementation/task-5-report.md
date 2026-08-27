@@ -24,3 +24,20 @@
 ## Manual evidence
 
 The required ten-minute interactive desktop smoke was not performed in this headless environment and is unverified. No manual-play result is claimed.
+
+## Fix Round 1
+
+### Root causes
+
+- Rabbit and fox started on the ground while their AABBs also overlapped nearby platforms. The platform centres were also too far apart for collider-aware sequential jumps, particularly for the fox profile.
+- `Checkpoint` was a `Marker2D`; it had neither an activation collision area nor a connected signal to update `PlayerBody.checkpoint_position`.
+- The indicator only calculated line candidates from an assumed inset-contained local point. A local point in the outer band, directed farther outward, produced no valid positive candidate and therefore `INF` coordinates.
+
+### RED / GREEN evidence
+
+- RED command prefix: `GODOT_BIN="$PWD/.tools/godot-4.7.2-task5/Godot_v4.7.2-stable_linux.x86_64"; "$GODOT_BIN" --headless --path game -s res://tests/integration/test_local_arena.gd -- --case=<case>`.
+- RED: `<case>=spawn` exited 1 with a post-physics static-collider overlap for Rabbit; `checkpoint` exited 1 with `checkpoint must be an activation area connected to the arena`; `reachability` exited 1 with `Rabbit profile must have a collider-aware jump route from PlatformA to PlatformB`; and `indicator` exited 1 with `a local hero outside the inset must still produce a finite marker on the correct inset edge`.
+- GREEN: the same prefix with all four cases exited 0 after moving both spawns and tightening platform spacing, connecting a shared Area2D checkpoint, and adding validated/fallback ray-rectangle intersection handling.
+- GREEN: the complete `test_local_arena.gd` integration script exited 0 after the changes.
+
+The ten-minute interactive desktop smoke remains unverified in this headless environment.
