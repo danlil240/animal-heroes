@@ -10,6 +10,7 @@ config_version=5
 [application]
 
 config/name="Animal Heroes"
+run/main_scene="res://levels/test_arena.tscn"
 
 [autoload]
 
