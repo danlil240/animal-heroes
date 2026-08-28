@@ -1,5 +1,10 @@
 extends SceneTree
 
+## Two-process LAN check: both peers reach PLAYING with distinct heroes, a third
+## peer is refused, and the host's chosen level reaches the joining peer.
+
+const SHARED_LEVEL := "crystal_caves"
+
 
 func _init() -> void:
 	call_deferred("_run")
@@ -32,7 +37,17 @@ func _run() -> void:
 	if not expected_playing and session.state == session.PLAYING:
 		_fail("third client was accepted")
 		return
-	print("SESSION_RESULT role=%s state=%s character=%s" % [role, session.state, session.selected_character])
+	if role == "host":
+		session.start_level(SHARED_LEVEL)
+	elif role == "client":
+		var waited := 0.0
+		while waited < 3.0 and session.current_level_id.is_empty():
+			await create_timer(0.05).timeout
+			waited += 0.05
+		if session.current_level_id != SHARED_LEVEL:
+			_fail("client did not receive the host's level, got '%s'" % session.current_level_id)
+			return
+	print("SESSION_RESULT role=%s state=%s character=%s level=%s" % [role, session.state, session.selected_character, session.current_level_id])
 	if role == "client":
 		await create_timer(2.0).timeout
 	session.leave_game()
