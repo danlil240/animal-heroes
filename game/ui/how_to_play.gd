@@ -1,5 +1,7 @@
 extends Control
 
+signal back_requested()
+
 const CYCLE_SECONDS := 1.8
 const BASE_HERO_POSITION := Vector2(310.0, 78.0)
 
@@ -15,6 +17,7 @@ var _elapsed := 0.0
 
 func _ready() -> void:
 	layout_direction = Control.LAYOUT_DIRECTION_RTL
+	$Back.pressed.connect(func() -> void: back_requested.emit())
 
 
 func _process(delta: float) -> void:

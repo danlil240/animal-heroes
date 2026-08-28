@@ -17,6 +17,20 @@ mouse_filter = 2
 theme = ExtResource("2_theme")
 script = ExtResource("1_touch")
 
+[node name="Pause" type="Button" parent="."]
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -96.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 96.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 28
+text = "⏸"
+
 [node name="Movement" type="HBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 12

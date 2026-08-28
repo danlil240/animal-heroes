@@ -1,0 +1,17 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://ui/game_shell.gd" id="1_shell"]
+[ext_resource type="PackedScene" path="res://ui/connection_overlay.tscn" id="2_connection"]
+[ext_resource type="PackedScene" path="res://ui/pause_overlay.tscn" id="3_pause"]
+
+[node name="GameShell" type="Node"]
+script = ExtResource("1_shell")
+
+[node name="Screen" type="Node" parent="."]
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+layer = 8
+
+[node name="ConnectionOverlay" parent="Overlay" instance=ExtResource("2_connection")]
+
+[node name="PauseOverlay" parent="Overlay" instance=ExtResource("3_pause")]

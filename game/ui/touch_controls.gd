@@ -1,6 +1,10 @@
 class_name TouchControls
 extends Control
 
+## Asks to leave the level. The button is deliberately small, far from the
+## gameplay controls, and confirmed by the pause overlay.
+signal pause_requested
+
 const PlayerInputScript := preload("res://player/player_input.gd")
 
 const LEFT := "left"
@@ -10,6 +14,10 @@ const ACTION := "action"
 
 var _pointers: Dictionary = {}
 var _keyboard: Dictionary = {LEFT: false, RIGHT: false, JUMP: false, ACTION: false}
+
+
+func _ready() -> void:
+	$Pause.pressed.connect(func() -> void: pause_requested.emit())
 
 
 func input_frame() -> PlayerInputScript.InputFrame:

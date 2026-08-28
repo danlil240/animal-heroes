@@ -116,6 +116,27 @@ func play_sfx(path: String, is_projectile: bool = false) -> void:
 		player.finished.connect(_on_projectile_voice_finished, CONNECT_ONE_SHOT)
 
 
+## World music per level, so each screen sounds like where the players are.
+const LEVEL_MUSIC := {
+	"sunny_forest": MUSIC_SUNNY_FOREST,
+	"crystal_caves": MUSIC_CRYSTAL_CAVES,
+	"cloud_factory": MUSIC_CLOUD_FACTORY,
+	"robot_boss": MUSIC_CLOUD_FACTORY,
+	"star_race": MUSIC_COMPETITION,
+	"treasure_dash": MUSIC_COMPETITION,
+	"bubble_bounce": MUSIC_COMPETITION,
+	"test_arena": MUSIC_SUNNY_FOREST,
+}
+
+
+func play_level_music(level_id: String) -> void:
+	play_music(LEVEL_MUSIC.get(level_id, MUSIC_SUNNY_FOREST))
+
+
+func play_menu_music() -> void:
+	play_music(MUSIC_SUNNY_FOREST)
+
+
 func play_ui_sound() -> void:
 	play_sfx(SFX_UI)
 

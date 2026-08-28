@@ -19,6 +19,6 @@ sleep 0.4
 "$GODOT_BIN" --headless --path "$PROJECT_ROOT/game" -s res://tests/integration/test_session_pair.gd -- --role=third >"$RUN_DIR/third.log" 2>&1
 wait "$client_pid"
 wait "$host_pid"
-grep -q 'SESSION_RESULT role=host state=playing character=rabbit' "$RUN_DIR/host.log"
-grep -q 'SESSION_RESULT role=client state=playing character=fox' "$RUN_DIR/client.log"
-grep -q 'SESSION_RESULT role=third state=idle character=fox' "$RUN_DIR/third.log"
+grep -q 'SESSION_RESULT role=host state=playing character=rabbit level=crystal_caves' "$RUN_DIR/host.log"
+grep -q 'SESSION_RESULT role=client state=playing character=fox level=crystal_caves' "$RUN_DIR/client.log"
+grep -q 'SESSION_RESULT role=third state=idle character=fox level=' "$RUN_DIR/third.log"

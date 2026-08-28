@@ -10,7 +10,7 @@ config_version=5
 [application]
 
 config/name="Animal Heroes"
-run/main_scene="res://levels/test_arena.tscn"
+run/main_scene="res://ui/game_shell.tscn"
 
 [autoload]
 
@@ -32,5 +32,6 @@ common/physics_ticks_per_second=30
 
 [rendering]
 
+textures/vram_compression/import_etc2_astc=true
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"

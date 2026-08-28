@@ -53,6 +53,14 @@ layout_mode = 2
 theme_override_constants/separation = 12
 layout_direction = 3
 
+[node name="Next" type="Button" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+layout_direction = 3
+visible = false
+text = "ממשיכים"
+
 [node name="Rematch" type="Button" parent="Margin/VBox"]
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2

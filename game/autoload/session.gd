@@ -9,6 +9,7 @@ signal resumed()
 signal snapshot_received(snapshot: Dictionary)
 signal reconnect_state_changed(next_state: String)
 signal checkpoint_confirmed(checkpoint: Dictionary)
+signal level_start_received(level_id: String)
 
 const GameConfig = preload("res://core/game_config.gd")
 const SessionState = preload("res://network/session_state.gd")
@@ -23,6 +24,11 @@ const LOBBY := SessionState.LOBBY
 const PLAYING := SessionState.PLAYING
 const RECONNECTING := SessionState.RECONNECTING
 
+## Both tablets reach each other over IPv4 on the Wi-Fi LAN, and that is what
+## discovery advertises. Binding the IPv4 wildcard instead of ENet's default
+## IPv6 wildcard keeps those advertised addresses connectable.
+const BIND_ADDRESS := "0.0.0.0"
+
 const TRAFFIC_TIMEOUT: float = 1.5
 const RESUME_COUNTDOWN: float = 3.0
 const SESSION_ID_ALPHABET := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -30,6 +36,7 @@ const SESSION_ID_ALPHABET := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX
 var state := IDLE
 var selected_character := "rabbit"
 var session_id := ""
+var current_level_id := ""
 var confirmed_checkpoint: Dictionary = {}
 
 var _peer: ENetMultiplayerPeer
@@ -74,6 +81,7 @@ func tick(delta: float) -> void:
 func create_game() -> Error:
 	leave_game()
 	_peer = ENetMultiplayerPeer.new()
+	_peer.set_bind_ip(BIND_ADDRESS)
 	var result := _peer.create_server(GameConfig.GAME_PORT, GameConfig.MAX_PLAYERS - 1)
 	if result != OK:
 		_peer = null
@@ -89,6 +97,32 @@ func create_game() -> Error:
 	return OK
 
 
+## Starts looking for a host on the local network.
+func begin_discovery() -> void:
+	_set_state(DISCOVERING)
+
+
+## Host-only: tells both peers which level to open, so the joining tablet never
+## has to guess what the host picked.
+func start_level(level_id: String) -> void:
+	if level_id.is_empty():
+		return
+	if not _is_host and _peer != null:
+		return
+	current_level_id = level_id
+	if _is_host and _peer != null:
+		deliver_level_start.rpc(level_id)
+	level_start_received.emit(level_id)
+
+
+@rpc("authority", "reliable")
+func deliver_level_start(level_id: String) -> void:
+	if level_id.is_empty():
+		return
+	current_level_id = level_id
+	level_start_received.emit(level_id)
+
+
 func join_game(host: String, port: int = GameConfig.GAME_PORT, character_id: String = "fox") -> Error:
 	if not host.is_valid_ip_address() or port <= 0 or port > 65535:
 		return ERR_INVALID_PARAMETER
@@ -101,6 +135,7 @@ func join_game(host: String, port: int = GameConfig.GAME_PORT, character_id: Str
 	_last_port = port
 	_last_character = character_id
 	_peer = ENetMultiplayerPeer.new()
+	_peer.set_bind_ip(BIND_ADDRESS)
 	var result := _peer.create_client(host, port)
 	if result != OK:
 		_peer = null
@@ -128,6 +163,7 @@ func leave_game() -> void:
 	_retry_in_flight = false
 	_reconnect.reset()
 	session_id = ""
+	current_level_id = ""
 	if state != IDLE:
 		_set_state(IDLE)
 

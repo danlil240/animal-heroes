@@ -123,3 +123,21 @@ theme_override_font_sizes/font_size = 26
 text = "זזים ימינה ושמאלה"
 horizontal_alignment = 1
 layout_direction = 3
+
+[node name="Back" type="Button" parent="."]
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -216.0
+offset_top = -120.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 26
+layout_direction = 3
+text = "חזרה"

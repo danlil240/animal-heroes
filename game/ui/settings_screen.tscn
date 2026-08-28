@@ -1,0 +1,128 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/settings_screen.gd" id="1_settings"]
+[ext_resource type="Theme" path="res://theme/game_theme.tres" id="2_theme"]
+
+[node name="SettingsScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+layout_direction = 3
+theme = ExtResource("2_theme")
+script = ExtResource("1_settings")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -420.0
+offset_top = -260.0
+offset_right = 420.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 24
+layout_direction = 3
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+layout_direction = 3
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+layout_direction = 3
+text = "הגדרות"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Music" type="HBoxContainer" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_override_constants/separation = 16
+layout_direction = 3
+
+[node name="Label" type="Label" parent="Margin/VBox/Music"]
+custom_minimum_size = Vector2(200, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+layout_direction = 3
+text = "מוזיקה"
+vertical_alignment = 1
+
+[node name="Slider" type="HSlider" parent="Margin/VBox/Music"]
+custom_minimum_size = Vector2(360, 96)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+max_value = 1.0
+step = 0.05
+value = 0.8
+layout_direction = 3
+
+[node name="Value" type="Label" parent="Margin/VBox/Music"]
+custom_minimum_size = Vector2(110, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+layout_direction = 3
+text = "80%"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Sfx" type="HBoxContainer" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_override_constants/separation = 16
+layout_direction = 3
+
+[node name="Label" type="Label" parent="Margin/VBox/Sfx"]
+custom_minimum_size = Vector2(200, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+layout_direction = 3
+text = "צלילים"
+vertical_alignment = 1
+
+[node name="Slider" type="HSlider" parent="Margin/VBox/Sfx"]
+custom_minimum_size = Vector2(360, 96)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+max_value = 1.0
+step = 0.05
+value = 0.8
+layout_direction = 3
+
+[node name="Value" type="Label" parent="Margin/VBox/Sfx"]
+custom_minimum_size = Vector2(110, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+layout_direction = 3
+text = "80%"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Vibration" type="Button" parent="Margin/VBox"]
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+layout_direction = 3
+text = "רעידות: פועל"
+
+[node name="Back" type="Button" parent="Margin/VBox"]
+custom_minimum_size = Vector2(96, 96)
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+layout_direction = 3
+text = "חזרה"
