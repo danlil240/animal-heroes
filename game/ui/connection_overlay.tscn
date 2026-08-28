@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://ui/connection_overlay.gd" id="1_overlay"]
+[ext_resource type="Theme" path="res://theme/game_theme.tres" id="2_theme"]
 
 [node name="ConnectionOverlay" type="Control"]
 layout_mode = 3
@@ -11,6 +12,7 @@ grow_horizontal = 2
 grow_vertical = 2
 layout_direction = 3
 mouse_filter = 2
+theme = ExtResource("2_theme")
 script = ExtResource("1_overlay")
 
 [node name="Panel" type="PanelContainer" parent="."]

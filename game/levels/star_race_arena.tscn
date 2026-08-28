@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://levels/star_race_arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -7,6 +7,11 @@
 [ext_resource type="PackedScene" path="res://ui/touch_controls.tscn" id="5_touch"]
 [ext_resource type="Script" path="res://world/partner_indicator.gd" id="6_indicator"]
 [ext_resource type="Script" path="res://world/race_checkpoint.gd" id="7_race_cp"]
+[ext_resource type="PackedScene" path="res://visual/platform_visual.tscn" id="8_platform_visual"]
+[ext_resource type="PackedScene" path="res://visual/sunny_forest_background.tscn" id="9_background"]
+[ext_resource type="PackedScene" path="res://visual/hero_visual.tscn" id="10_hero_visual"]
+[ext_resource type="PackedScene" path="res://visual/finish_line_visual.tscn" id="11_finish_visual"]
+[ext_resource type="PackedScene" path="res://visual/checkpoint_visual.tscn" id="12_checkpoint_visual"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(3400, 80)
@@ -32,6 +37,8 @@ size = Vector2(120, 120)
 [node name="StarRaceArena" type="Node2D"]
 script = ExtResource("1_arena")
 
+[node name="SunnyForestBackground" parent="." instance=ExtResource("9_background")]
+
 [node name="RabbitSpawn" type="Marker2D" parent="." groups=["player_spawn"]]
 position = Vector2(80, 656)
 
@@ -44,9 +51,8 @@ position = Vector2(1700, 720)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("GroundShape")
 
-[node name="GroundArt" type="Polygon2D" parent="Ground"]
-polygon = PackedVector2Array(-1700, -40, 1700, -40, 1700, 40, -1700, 40)
-color = Color(0.22, 0.48, 0.25, 1)
+[node name="Visual" parent="Ground" instance=ExtResource("8_platform_visual")]
+ground_variant = true
 
 [node name="Platform1" type="StaticBody2D" parent="." groups=["race_platform"]]
 position = Vector2(350, 610)
@@ -54,9 +60,7 @@ position = Vector2(350, 610)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform1"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform1"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform1" instance=ExtResource("8_platform_visual")]
 
 [node name="Platform2" type="StaticBody2D" parent="." groups=["race_platform"]]
 position = Vector2(800, 610)
@@ -64,9 +68,7 @@ position = Vector2(800, 610)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform2"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform2"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform2" instance=ExtResource("8_platform_visual")]
 
 [node name="Platform3" type="StaticBody2D" parent="." groups=["race_platform"]]
 position = Vector2(1400, 610)
@@ -74,9 +76,7 @@ position = Vector2(1400, 610)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform3"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform3"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform3" instance=ExtResource("8_platform_visual")]
 
 [node name="Platform4" type="StaticBody2D" parent="." groups=["race_platform"]]
 position = Vector2(1750, 540)
@@ -84,9 +84,7 @@ position = Vector2(1750, 540)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform4"]
 shape = SubResource("SmallPlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform4"]
-polygon = PackedVector2Array(-70, -10, 70, -10, 70, 10, -70, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform4" instance=ExtResource("8_platform_visual")]
 
 [node name="Platform5" type="StaticBody2D" parent="." groups=["race_platform"]]
 position = Vector2(2200, 610)
@@ -94,9 +92,7 @@ position = Vector2(2200, 610)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform5"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform5"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform5" instance=ExtResource("8_platform_visual")]
 
 [node name="Platform6" type="StaticBody2D" parent="." groups=["race_platform"]]
 position = Vector2(2550, 540)
@@ -104,9 +100,7 @@ position = Vector2(2550, 540)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform6"]
 shape = SubResource("SmallPlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform6"]
-polygon = PackedVector2Array(-70, -10, 70, -10, 70, 10, -70, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform6" instance=ExtResource("8_platform_visual")]
 
 [node name="Platform7" type="StaticBody2D" parent="." groups=["race_platform"]]
 position = Vector2(2900, 610)
@@ -114,9 +108,7 @@ position = Vector2(2900, 610)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform7"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform7"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform7" instance=ExtResource("8_platform_visual")]
 
 [node name="RaceCheckpoint1" type="Area2D" parent="." groups=["race_checkpoint"]]
 position = Vector2(500, 656)
@@ -126,6 +118,8 @@ checkpoint_id = "rcp-1"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="RaceCheckpoint1"]
 shape = SubResource("CheckpointShape")
 
+[node name="Visual" parent="RaceCheckpoint1" instance=ExtResource("12_checkpoint_visual")]
+
 [node name="RaceCheckpoint2" type="Area2D" parent="." groups=["race_checkpoint"]]
 position = Vector2(1200, 656)
 script = ExtResource("7_race_cp")
@@ -133,6 +127,8 @@ checkpoint_id = "rcp-2"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="RaceCheckpoint2"]
 shape = SubResource("CheckpointShape")
+
+[node name="Visual" parent="RaceCheckpoint2" instance=ExtResource("12_checkpoint_visual")]
 
 [node name="RaceCheckpoint3" type="Area2D" parent="." groups=["race_checkpoint"]]
 position = Vector2(2000, 656)
@@ -142,6 +138,8 @@ checkpoint_id = "rcp-3"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="RaceCheckpoint3"]
 shape = SubResource("CheckpointShape")
 
+[node name="Visual" parent="RaceCheckpoint3" instance=ExtResource("12_checkpoint_visual")]
+
 [node name="RaceCheckpoint4" type="Area2D" parent="." groups=["race_checkpoint"]]
 position = Vector2(2700, 656)
 script = ExtResource("7_race_cp")
@@ -150,15 +148,15 @@ checkpoint_id = "rcp-4"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="RaceCheckpoint4"]
 shape = SubResource("CheckpointShape")
 
+[node name="Visual" parent="RaceCheckpoint4" instance=ExtResource("12_checkpoint_visual")]
+
 [node name="FinishLine" type="Area2D" parent="." groups=["race_finish"]]
 position = Vector2(3250, 656)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FinishLine"]
 shape = SubResource("FinishShape")
 
-[node name="Art" type="Polygon2D" parent="FinishLine"]
-polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
-color = Color(0.95, 0.85, 0.1, 0.6)
+[node name="Visual" parent="FinishLine" instance=ExtResource("11_finish_visual")]
 
 [node name="FallRespawn" type="Area2D" parent="."]
 position = Vector2(1700, 930)
@@ -174,9 +172,8 @@ profile = ExtResource("3_rabbit")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Rabbit"]
 shape = SubResource("PlayerShape")
 
-[node name="BodyArt" type="Polygon2D" parent="Rabbit"]
-polygon = PackedVector2Array(-16, 24, -16, -14, -8, -24, 0, -13, 8, -24, 16, -14, 16, 24)
-color = Color(0.88, 0.88, 0.93, 1)
+[node name="Visual" parent="Rabbit" instance=ExtResource("10_hero_visual")]
+kind = "rabbit"
 
 [node name="Camera2D" type="Camera2D" parent="Rabbit"]
 position = Vector2(0, 0)
@@ -193,9 +190,8 @@ profile = ExtResource("4_fox")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Fox"]
 shape = SubResource("PlayerShape")
 
-[node name="BodyArt" type="Polygon2D" parent="Fox"]
-polygon = PackedVector2Array(-16, 24, -16, -14, -8, -24, 0, -13, 8, -24, 16, -14, 16, 24)
-color = Color(0.9, 0.31, 0.13, 1)
+[node name="Visual" parent="Fox" instance=ExtResource("10_hero_visual")]
+kind = "fox"
 
 [node name="Camera2D" type="Camera2D" parent="Fox"]
 position = Vector2(0, 0)
@@ -213,6 +209,10 @@ layout_mode = 0
 mouse_filter = 2
 script = ExtResource("6_indicator")
 
+[node name="Outline" type="Polygon2D" parent="HUD/PartnerIndicator"]
+polygon = PackedVector2Array(24, 0, -16, -13, -9, 0, -16, 13)
+color = Color(0.09, 0.16, 0.29, 0.95)
+
 [node name="Arrow" type="Polygon2D" parent="HUD/PartnerIndicator"]
 polygon = PackedVector2Array(18, 0, -12, -9, -5, 11)
-color = Color(1, 0.35, 0.08, 1)
+color = Color(1, 0.83, 0.24, 1)

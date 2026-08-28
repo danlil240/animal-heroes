@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://levels/crystal_caves.gd" id="1_caves"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -10,6 +10,14 @@
 [ext_resource type="Script" path="res://world/moving_platform.gd" id="8_platform"]
 [ext_resource type="Script" path="res://world/interactable.gd" id="9_switch"]
 [ext_resource type="Script" path="res://world/door.gd" id="10_door"]
+[ext_resource type="PackedScene" path="res://visual/crystal_platform_visual.tscn" id="11_platform_visual"]
+[ext_resource type="PackedScene" path="res://visual/star_collectible_visual.tscn" id="12_star_visual"]
+[ext_resource type="PackedScene" path="res://visual/checkpoint_visual.tscn" id="13_checkpoint_visual"]
+[ext_resource type="PackedScene" path="res://visual/hero_visual.tscn" id="14_hero_visual"]
+[ext_resource type="PackedScene" path="res://visual/crystal_caves_background.tscn" id="15_background"]
+[ext_resource type="PackedScene" path="res://visual/switch_visual.tscn" id="16_switch_visual"]
+[ext_resource type="PackedScene" path="res://visual/door_visual.tscn" id="17_door_visual"]
+[ext_resource type="PackedScene" path="res://visual/boulder_visual.tscn" id="18_boulder_visual"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(3200, 80)
@@ -41,6 +49,8 @@ size = Vector2(48, 48)
 [node name="CrystalCaves" type="Node2D"]
 script = ExtResource("1_caves")
 
+[node name="CrystalCavesBackground" parent="." instance=ExtResource("15_background")]
+
 [node name="RabbitSpawn" type="Marker2D" parent="." groups=["player_spawn"]]
 position = Vector2(80, 656)
 
@@ -53,9 +63,8 @@ position = Vector2(1600, 720)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("GroundShape")
 
-[node name="GroundArt" type="Polygon2D" parent="Ground"]
-polygon = PackedVector2Array(-1600, -40, 1600, -40, 1600, 40, -1600, 40)
-color = Color(0.25, 0.22, 0.38, 1)
+[node name="Visual" parent="Ground" instance=ExtResource("11_platform_visual")]
+ground_variant = true
 
 [node name="Platform1" type="StaticBody2D" parent="."]
 position = Vector2(350, 580)
@@ -63,9 +72,7 @@ position = Vector2(350, 580)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform1"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform1"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.35, 0.3, 0.5, 1)
+[node name="Visual" parent="Platform1" instance=ExtResource("11_platform_visual")]
 
 [node name="Platform2" type="StaticBody2D" parent="."]
 position = Vector2(650, 500)
@@ -73,9 +80,7 @@ position = Vector2(650, 500)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform2"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform2"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.35, 0.3, 0.5, 1)
+[node name="Visual" parent="Platform2" instance=ExtResource("11_platform_visual")]
 
 [node name="Platform3" type="StaticBody2D" parent="."]
 position = Vector2(950, 580)
@@ -83,9 +88,7 @@ position = Vector2(950, 580)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform3"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform3"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.35, 0.3, 0.5, 1)
+[node name="Visual" parent="Platform3" instance=ExtResource("11_platform_visual")]
 
 [node name="Platform4" type="StaticBody2D" parent="."]
 position = Vector2(1250, 500)
@@ -93,9 +96,7 @@ position = Vector2(1250, 500)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform4"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform4"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.35, 0.3, 0.5, 1)
+[node name="Visual" parent="Platform4" instance=ExtResource("11_platform_visual")]
 
 [node name="Platform5" type="StaticBody2D" parent="."]
 position = Vector2(1550, 420)
@@ -103,9 +104,7 @@ position = Vector2(1550, 420)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform5"]
 shape = SubResource("SmallPlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform5"]
-polygon = PackedVector2Array(-70, -10, 70, -10, 70, 10, -70, 10)
-color = Color(0.35, 0.3, 0.5, 1)
+[node name="Visual" parent="Platform5" instance=ExtResource("11_platform_visual")]
 
 [node name="Platform6" type="StaticBody2D" parent="."]
 position = Vector2(1850, 580)
@@ -113,9 +112,7 @@ position = Vector2(1850, 580)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform6"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform6"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.35, 0.3, 0.5, 1)
+[node name="Visual" parent="Platform6" instance=ExtResource("11_platform_visual")]
 
 [node name="Platform7" type="StaticBody2D" parent="."]
 position = Vector2(2150, 500)
@@ -123,9 +120,7 @@ position = Vector2(2150, 500)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform7"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform7"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.35, 0.3, 0.5, 1)
+[node name="Visual" parent="Platform7" instance=ExtResource("11_platform_visual")]
 
 [node name="Platform8" type="StaticBody2D" parent="."]
 position = Vector2(2450, 580)
@@ -133,9 +128,7 @@ position = Vector2(2450, 580)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform8"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform8"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.35, 0.3, 0.5, 1)
+[node name="Visual" parent="Platform8" instance=ExtResource("11_platform_visual")]
 
 [node name="Platform9" type="StaticBody2D" parent="."]
 position = Vector2(2750, 500)
@@ -143,9 +136,7 @@ position = Vector2(2750, 500)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform9"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform9"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.35, 0.3, 0.5, 1)
+[node name="Visual" parent="Platform9" instance=ExtResource("11_platform_visual")]
 
 [node name="MovingPlatform1" type="AnimatableBody2D" parent="." groups=["moving_platform"]]
 position = Vector2(1100, 450)
@@ -157,9 +148,7 @@ axis = "horizontal"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="MovingPlatform1"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="MovingPlatform1"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.5, 0.4, 0.7, 1)
+[node name="Visual" parent="MovingPlatform1" instance=ExtResource("11_platform_visual")]
 
 [node name="MovingPlatform2" type="AnimatableBody2D" parent="." groups=["moving_platform"]]
 position = Vector2(2300, 450)
@@ -171,9 +160,7 @@ axis = "vertical"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="MovingPlatform2"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="MovingPlatform2"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.5, 0.4, 0.7, 1)
+[node name="Visual" parent="MovingPlatform2" instance=ExtResource("11_platform_visual")]
 
 [node name="Checkpoint1" type="Area2D" parent="." groups=["checkpoint"]]
 position = Vector2(400, 656)
@@ -183,6 +170,8 @@ checkpoint_id = "cp-1"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Checkpoint1"]
 shape = SubResource("CheckpointShape")
 
+[node name="Visual" parent="Checkpoint1" instance=ExtResource("13_checkpoint_visual")]
+
 [node name="Checkpoint2" type="Area2D" parent="." groups=["checkpoint"]]
 position = Vector2(1100, 656)
 script = ExtResource("7_checkpoint")
@@ -190,6 +179,8 @@ checkpoint_id = "cp-2"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Checkpoint2"]
 shape = SubResource("CheckpointShape")
+
+[node name="Visual" parent="Checkpoint2" instance=ExtResource("13_checkpoint_visual")]
 
 [node name="Checkpoint3" type="Area2D" parent="." groups=["checkpoint"]]
 position = Vector2(2000, 656)
@@ -199,6 +190,8 @@ checkpoint_id = "cp-3"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Checkpoint3"]
 shape = SubResource("CheckpointShape")
 
+[node name="Visual" parent="Checkpoint3" instance=ExtResource("13_checkpoint_visual")]
+
 [node name="Checkpoint4" type="Area2D" parent="." groups=["checkpoint"]]
 position = Vector2(2900, 656)
 script = ExtResource("7_checkpoint")
@@ -206,6 +199,8 @@ checkpoint_id = "cp-4"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Checkpoint4"]
 shape = SubResource("CheckpointShape")
+
+[node name="Visual" parent="Checkpoint4" instance=ExtResource("13_checkpoint_visual")]
 
 [node name="Switch1A" type="Area2D" parent="." groups=["switch_door_pair"]]
 position = Vector2(500, 640)
@@ -216,9 +211,7 @@ requires_host_authority = false
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Switch1A"]
 shape = SubResource("SwitchShape")
 
-[node name="Art" type="Polygon2D" parent="Switch1A"]
-polygon = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20)
-color = Color(0.9, 0.7, 0.2, 1)
+[node name="Visual" parent="Switch1A" instance=ExtResource("16_switch_visual")]
 
 [node name="Switch1B" type="Area2D" parent="." groups=["switch_door_pair"]]
 position = Vector2(800, 480)
@@ -229,9 +222,7 @@ requires_host_authority = false
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Switch1B"]
 shape = SubResource("SwitchShape")
 
-[node name="Art" type="Polygon2D" parent="Switch1B"]
-polygon = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20)
-color = Color(0.9, 0.7, 0.2, 1)
+[node name="Visual" parent="Switch1B" instance=ExtResource("16_switch_visual")]
 
 [node name="Door1" type="StaticBody2D" parent="." groups=["switch_door_pair"]]
 position = Vector2(950, 620)
@@ -242,9 +233,7 @@ paired_switch_ids = ["switch-1a", "switch-1b"]
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Door1"]
 shape = SubResource("DoorShape")
 
-[node name="Art" type="Polygon2D" parent="Door1"]
-polygon = PackedVector2Array(-40, -50, 40, -50, 40, 50, -40, 50)
-color = Color(0.6, 0.5, 0.8, 1)
+[node name="Visual" parent="Door1" instance=ExtResource("17_door_visual")]
 
 [node name="Switch2A" type="Area2D" parent="." groups=["switch_door_pair"]]
 position = Vector2(1700, 640)
@@ -255,9 +244,7 @@ requires_host_authority = false
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Switch2A"]
 shape = SubResource("SwitchShape")
 
-[node name="Art" type="Polygon2D" parent="Switch2A"]
-polygon = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20)
-color = Color(0.9, 0.7, 0.2, 1)
+[node name="Visual" parent="Switch2A" instance=ExtResource("16_switch_visual")]
 
 [node name="Switch2B" type="Area2D" parent="." groups=["switch_door_pair"]]
 position = Vector2(2100, 480)
@@ -268,9 +255,7 @@ requires_host_authority = false
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Switch2B"]
 shape = SubResource("SwitchShape")
 
-[node name="Art" type="Polygon2D" parent="Switch2B"]
-polygon = PackedVector2Array(-20, -20, 20, -20, 20, 20, -20, 20)
-color = Color(0.9, 0.7, 0.2, 1)
+[node name="Visual" parent="Switch2B" instance=ExtResource("16_switch_visual")]
 
 [node name="Door2" type="StaticBody2D" parent="." groups=["switch_door_pair"]]
 position = Vector2(2450, 620)
@@ -281,9 +266,7 @@ paired_switch_ids = ["switch-2a", "switch-2b"]
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Door2"]
 shape = SubResource("DoorShape")
 
-[node name="Art" type="Polygon2D" parent="Door2"]
-polygon = PackedVector2Array(-40, -50, 40, -50, 40, 50, -40, 50)
-color = Color(0.6, 0.5, 0.8, 1)
+[node name="Visual" parent="Door2" instance=ExtResource("17_door_visual")]
 
 [node name="HeavyPushable1" type="RigidBody2D" parent="." groups=["heavy_pushable"]]
 position = Vector2(1400, 696)
@@ -291,9 +274,7 @@ position = Vector2(1400, 696)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="HeavyPushable1"]
 shape = SubResource("PushableShape")
 
-[node name="Art" type="Polygon2D" parent="HeavyPushable1"]
-polygon = PackedVector2Array(-24, -24, 24, -24, 24, 24, -24, 24)
-color = Color(0.7, 0.6, 0.5, 1)
+[node name="Visual" parent="HeavyPushable1" instance=ExtResource("18_boulder_visual")]
 
 [node name="ReunionRoute1" type="Marker2D" parent="." groups=["reunion_route"]]
 position = Vector2(1200, 656)
@@ -315,9 +296,8 @@ profile = ExtResource("3_rabbit")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Rabbit"]
 shape = SubResource("PlayerShape")
 
-[node name="BodyArt" type="Polygon2D" parent="Rabbit"]
-polygon = PackedVector2Array(-16, 24, -16, -14, -8, -24, 0, -13, 8, -24, 16, -14, 16, 24)
-color = Color(0.88, 0.88, 0.93, 1)
+[node name="Visual" parent="Rabbit" instance=ExtResource("14_hero_visual")]
+kind = "rabbit"
 
 [node name="Camera2D" type="Camera2D" parent="Rabbit"]
 position = Vector2(0, 0)
@@ -334,9 +314,8 @@ profile = ExtResource("4_fox")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Fox"]
 shape = SubResource("PlayerShape")
 
-[node name="BodyArt" type="Polygon2D" parent="Fox"]
-polygon = PackedVector2Array(-16, 24, -16, -14, -8, -24, 0, -13, 8, -24, 16, -14, 16, 24)
-color = Color(0.9, 0.31, 0.13, 1)
+[node name="Visual" parent="Fox" instance=ExtResource("14_hero_visual")]
+kind = "fox"
 
 [node name="Camera2D" type="Camera2D" parent="Fox"]
 position = Vector2(0, 0)
@@ -354,6 +333,10 @@ layout_mode = 0
 mouse_filter = 2
 script = ExtResource("6_indicator")
 
+[node name="Outline" type="Polygon2D" parent="HUD/PartnerIndicator"]
+polygon = PackedVector2Array(24, 0, -16, -13, -9, 0, -16, 13)
+color = Color(0.09, 0.16, 0.29, 0.95)
+
 [node name="Arrow" type="Polygon2D" parent="HUD/PartnerIndicator"]
 polygon = PackedVector2Array(18, 0, -12, -9, -5, 11)
-color = Color(1, 0.35, 0.08, 1)
+color = Color(1, 0.83, 0.24, 1)

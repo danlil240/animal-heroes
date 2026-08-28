@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Permission audit for the Animal Heroes APK.
+# Fails if the APK requests any sensitive permission.
+# Usage: bash game/tests/device/apk_permissions.sh <path-to-apk>
+set -euo pipefail
+
+APK="${1:-}"
+if [[ -z "$APK" || ! -f "$APK" ]]; then
+  echo "Usage: $0 <path-to-apk>" >&2
+  exit 2
+fi
+
+if ! command -v aapt >/dev/null 2>&1; then
+  echo "aapt not found. Install Android SDK build-tools." >&2
+  echo "See docs/android-build.md for prerequisites." >&2
+  exit 2
+fi
+
+PERMISSIONS="$(aapt dump permissions "$APK" 2>/dev/null || true)"
+
+if grep -Eq \
+  'CAMERA|RECORD_AUDIO|READ_CONTACTS|WRITE_CONTACTS|READ_PHONE|ACCESS_FINE_LOCATION|ACCESS_COARSE_LOCATION|READ_SMS|WRITE_EXTERNAL_STORAGE|MANAGE_EXTERNAL_STORAGE|READ_EXTERNAL_STORAGE' \
+  <<<"$PERMISSIONS"; then
+  echo "FAIL: sensitive permissions detected in APK:" >&2
+  printf '%s\n' "$PERMISSIONS" >&2
+  exit 1
+fi
+
+echo "PASS: no sensitive permissions found."
+if [[ -n "$PERMISSIONS" ]]; then
+  printf '%s\n' "$PERMISSIONS"
+fi
