@@ -74,11 +74,7 @@ func leave_game() -> void:
 func _on_peer_connected(peer_id: int) -> void:
 	if not _is_host or _characters_by_peer.size() >= GameConfig.MAX_PLAYERS:
 		_peer.disconnect_peer(peer_id, true)
-		return
-	var character_id := "fox" if selected_character == "rabbit" else "rabbit"
-	_characters_by_peer[peer_id] = character_id
-	peer_ready.emit(peer_id, character_id)
-	_set_state(PLAYING)
+
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
@@ -88,8 +84,8 @@ func _on_peer_disconnected(peer_id: int) -> void:
 
 
 func _on_connected_to_server() -> void:
-	peer_ready.emit(multiplayer.get_unique_id(), selected_character)
-	_set_state(PLAYING)
+	_set_state(LOBBY)
+	request_lobby_entry.rpc(GameConfig.PROTOCOL_VERSION, GameConfig.CONTENT_VERSION, selected_character)
 
 
 func _on_connection_failed() -> void:
@@ -113,3 +109,44 @@ func _set_state(next_state: String) -> void:
 
 func _fail(message: String) -> void:
 	session_error.emit(message)
+
+
+@rpc("any_peer", "reliable")
+func request_lobby_entry(protocol_version: int, content_version: String, requested_character: String) -> void:
+	if not _is_host:
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	if protocol_version != GameConfig.PROTOCOL_VERSION or content_version != GameConfig.CONTENT_VERSION:
+		reject_lobby_entry.rpc_id(peer_id, "גרסת המשחק אינה תואמת")
+		_peer.disconnect_peer(peer_id)
+		return
+	if requested_character != "rabbit" and requested_character != "fox":
+		reject_lobby_entry.rpc_id(peer_id, "הדמות שנבחרה אינה זמינה")
+		_peer.disconnect_peer(peer_id)
+		return
+	var character_id := requested_character if not _characters_by_peer.values().has(requested_character) else _other_character(requested_character)
+	if _characters_by_peer.values().has(character_id):
+		reject_lobby_entry.rpc_id(peer_id, "המשחק מלא")
+		_peer.disconnect_peer(peer_id)
+		return
+	_characters_by_peer[peer_id] = character_id
+	confirm_lobby_entry.rpc_id(peer_id, character_id)
+	peer_ready.emit(peer_id, character_id)
+	_set_state(PLAYING)
+
+
+@rpc("authority", "reliable")
+func confirm_lobby_entry(character_id: String) -> void:
+	selected_character = character_id
+	peer_ready.emit(multiplayer.get_unique_id(), character_id)
+	_set_state(PLAYING)
+
+
+@rpc("authority", "reliable")
+func reject_lobby_entry(message: String) -> void:
+	_fail(message)
+	leave_game()
+
+
+func _other_character(character_id: String) -> String:
+	return "fox" if character_id == "rabbit" else "rabbit"
