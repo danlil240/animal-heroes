@@ -93,6 +93,10 @@ func _test_touch_layout(layout: Vector2) -> bool:
 	_prepare_layout(controls, layout)
 	root.add_child(controls)
 	await process_frame
+	if controls.theme == null:
+		return _fail_bool("touch controls must use the shared game theme")
+	if controls.get_node("Jump").icon == null or controls.get_node("Action").icon == null:
+		return _fail_bool("jump and action controls must have child-readable icons")
 	for touch_target in [controls.get_node("Movement/Left"), controls.get_node("Movement/Right"), controls.get_node("Jump"), controls.get_node("Action")]:
 		if minf(touch_target.size.x, touch_target.size.y) < 96.0:
 			return _fail_bool("touch target %s must be at least 96 px at %s" % [touch_target.name, layout])

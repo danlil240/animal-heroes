@@ -1,6 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://ui/touch_controls.gd" id="1_touch"]
+[ext_resource type="Theme" path="res://theme/game_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://art/ui/jump_wing.svg" id="3_jump"]
+[ext_resource type="Texture2D" path="res://art/ui/action_bubble.svg" id="4_action"]
 
 [node name="TouchControls" type="Control"]
 layout_mode = 3
@@ -10,6 +13,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme = ExtResource("2_theme")
 script = ExtResource("1_touch")
 
 [node name="Movement" type="HBoxContainer" parent="."]
@@ -51,8 +55,11 @@ offset_right = -160.0
 offset_bottom = -24.0
 grow_horizontal = 0
 grow_vertical = 0
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "קפיצה"
+icon = ExtResource("3_jump")
+expand_icon = true
+icon_max_width = 52
 layout_direction = 3
 
 [node name="Action" type="Button" parent="."]
@@ -69,6 +76,9 @@ offset_right = -24.0
 offset_bottom = -24.0
 grow_horizontal = 0
 grow_vertical = 0
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "פעולה"
+icon = ExtResource("4_action")
+expand_icon = true
+icon_max_width = 52
 layout_direction = 3

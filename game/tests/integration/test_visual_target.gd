@@ -44,6 +44,8 @@ func _run() -> void:
 		return
 	if not await _test_hero_presentation():
 		return
+	if not _test_indicator_presentation():
+		return
 	quit(0)
 
 
@@ -116,6 +118,19 @@ func _test_hero_presentation() -> bool:
 		visual._process(1.0 / 30.0)
 		if hero.position != before_position or hero.velocity != before_velocity:
 			return _fail_bool("hero presentation must not mutate %s physics state" % hero_name)
+	arena.queue_free()
+	return true
+
+
+func _test_indicator_presentation() -> bool:
+	var arena = load("res://levels/test_arena.tscn").instantiate()
+	root.add_child(arena)
+	var indicator: Control = arena.get_node("HUD/PartnerIndicator")
+	if indicator.get_node_or_null("Outline") == null:
+		return _fail_bool("partner indicator must have an outlined silhouette")
+	var arrow := indicator.get_node("Arrow") as Polygon2D
+	if arrow.color == Color(1.0, 0.35, 0.08, 1.0):
+		return _fail_bool("partner indicator must use the shared gold reward language")
 	arena.queue_free()
 	return true
 
