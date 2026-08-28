@@ -6,6 +6,7 @@ extends SceneTree
 const SHARED_LEVEL := "crystal_caves"
 
 var acknowledged_level := ""
+var third_reached_playing := false
 
 
 func _init() -> void:
@@ -24,6 +25,8 @@ func _run() -> void:
 	if session == null:
 		_fail("Session autoload must be present")
 		return
+	if role == "third":
+		session.state_changed.connect(_capture_third_state)
 	var expected_playing := role != "third"
 	var result: Error = session.create_game() if role == "host" else session.join_game("127.0.0.1", 28740, "rabbit")
 	if result != OK:
@@ -36,7 +39,7 @@ func _run() -> void:
 	if expected_playing and session.state != session.PLAYING:
 		_fail("%s did not reach PLAYING" % role)
 		return
-	if not expected_playing and session.state == session.PLAYING:
+	if not expected_playing and third_reached_playing:
 		_fail("third client was accepted")
 		return
 	if role == "host":
@@ -76,6 +79,11 @@ func _argument_value(name: String) -> String:
 
 func _capture_level_ack(_peer_id: int, level_id: String) -> void:
 	acknowledged_level = level_id
+
+
+func _capture_third_state(next_state: String) -> void:
+	if next_state == "playing":
+		third_reached_playing = true
 
 
 func _fail(message: String) -> void:
