@@ -42,6 +42,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(_delta: float) -> void:
+	$SunnyForestBackground.set_focus_x(_local_hero().global_position.x)
 	partner_indicator.update_for_world_positions(_local_hero().global_position, _remote_hero().global_position)
 
 

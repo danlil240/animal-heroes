@@ -1,0 +1,70 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://visual/crystal_caves_background.gd" id="1_bg"]
+[ext_resource type="Texture2D" path="res://art/environment/crystal_caves/cave_background.svg" id="2_cave"]
+[ext_resource type="Texture2D" path="res://art/environment/crystal_caves/crystal.svg" id="3_crystal"]
+[ext_resource type="Texture2D" path="res://art/environment/crystal_caves/stalactite.svg" id="4_stalactite"]
+
+[sub_resource type="Gradient" id="GradientCave"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.165, 0.102, 0.243, 1, 0.302, 0.196, 0.376, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTextureCave"]
+gradient = SubResource("GradientCave")
+width = 1600
+height = 800
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[node name="CrystalCavesBackground" type="Node2D"]
+z_index = -40
+script = ExtResource("1_bg")
+
+[node name="Sky" type="Sprite2D" parent="."]
+texture = SubResource("GradientTextureCave")
+centered = false
+
+[node name="Far" type="Node2D" parent="."]
+z_index = 1
+
+[node name="CaveWalls" type="Sprite2D" parent="Far"]
+position = Vector2(800, 590)
+texture = ExtResource("2_cave")
+
+[node name="Mid" type="Node2D" parent="."]
+z_index = 2
+
+[node name="CrystalA" type="Sprite2D" parent="Mid"]
+position = Vector2(200, 560)
+scale = Vector2(0.7, 0.7)
+modulate = Color(0.7, 0.6, 0.9, 0.82)
+texture = ExtResource("3_crystal")
+
+[node name="CrystalB" type="Sprite2D" parent="Mid"]
+position = Vector2(1300, 550)
+scale = Vector2(0.65, 0.65)
+modulate = Color(0.65, 0.55, 0.85, 0.82)
+texture = ExtResource("3_crystal")
+
+[node name="Frame" type="Node2D" parent="."]
+z_index = 60
+
+[node name="StalactiteA" type="Sprite2D" parent="Frame"]
+position = Vector2(80, 0)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("4_stalactite")
+
+[node name="StalactiteB" type="Sprite2D" parent="Frame"]
+position = Vector2(1450, 0)
+scale = Vector2(0.55, 0.55)
+texture = ExtResource("4_stalactite")
+
+[node name="CrystalFrame" type="Sprite2D" parent="Frame"]
+position = Vector2(140, 680)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("3_crystal")
+
+[node name="CrystalFrameB" type="Sprite2D" parent="Frame"]
+position = Vector2(1480, 670)
+scale = Vector2(0.48, 0.48)
+texture = ExtResource("3_crystal")

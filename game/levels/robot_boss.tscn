@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://levels/robot_boss.gd" id="1_boss"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -6,6 +6,10 @@
 [ext_resource type="Resource" path="res://player/fox_profile.tres" id="4_fox"]
 [ext_resource type="PackedScene" path="res://ui/touch_controls.tscn" id="5_touch"]
 [ext_resource type="Script" path="res://world/partner_indicator.gd" id="6_indicator"]
+[ext_resource type="PackedScene" path="res://visual/metal_platform_visual.tscn" id="7_metal_platform"]
+[ext_resource type="PackedScene" path="res://visual/cloud_factory_background.tscn" id="8_background"]
+[ext_resource type="PackedScene" path="res://visual/hero_visual.tscn" id="9_hero_visual"]
+[ext_resource type="PackedScene" path="res://visual/boss_visual.tscn" id="10_boss_visual"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(1600, 80)
@@ -21,6 +25,9 @@ size = Vector2(210, 20)
 
 [node name="RobotBossArena" type="Node2D"]
 script = ExtResource("1_boss")
+level_id = "robot_boss"
+
+[node name="CloudFactoryBackground" parent="." instance=ExtResource("8_background")]
 
 [node name="RabbitSpawn" type="Marker2D" parent="." groups=["player_spawn"]]
 position = Vector2(200, 656)
@@ -34,9 +41,8 @@ position = Vector2(800, 720)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("GroundShape")
 
-[node name="GroundArt" type="Polygon2D" parent="Ground"]
-polygon = PackedVector2Array(-800, -40, 800, -40, 800, 40, -800, 40)
-color = Color(0.3, 0.3, 0.35, 1)
+[node name="Visual" parent="Ground" instance=ExtResource("7_metal_platform")]
+ground_variant = true
 
 [node name="Platform1" type="StaticBody2D" parent="."]
 position = Vector2(400, 560)
@@ -44,9 +50,7 @@ position = Vector2(400, 560)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform1"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform1"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.45, 0.45, 0.5, 1)
+[node name="Visual" parent="Platform1" instance=ExtResource("7_metal_platform")]
 
 [node name="Platform2" type="StaticBody2D" parent="."]
 position = Vector2(1200, 560)
@@ -54,14 +58,10 @@ position = Vector2(1200, 560)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform2"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform2"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.45, 0.45, 0.5, 1)
+[node name="Visual" parent="Platform2" instance=ExtResource("7_metal_platform")]
 
-[node name="BossArt" type="Polygon2D" parent="."]
+[node name="BossVisual" parent="." instance=ExtResource("10_boss_visual")]
 position = Vector2(800, 500)
-polygon = PackedVector2Array(-80, -80, 80, -80, 80, 80, -80, 80)
-color = Color(0.7, 0.65, 0.7, 1)
 
 [node name="FallRespawn" type="Area2D" parent="."]
 position = Vector2(800, 930)
@@ -77,9 +77,8 @@ profile = ExtResource("3_rabbit")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Rabbit"]
 shape = SubResource("PlayerShape")
 
-[node name="BodyArt" type="Polygon2D" parent="Rabbit"]
-polygon = PackedVector2Array(-16, 24, -16, -14, -8, -24, 0, -13, 8, -24, 16, -14, 16, 24)
-color = Color(0.88, 0.88, 0.93, 1)
+[node name="Visual" parent="Rabbit" instance=ExtResource("9_hero_visual")]
+kind = "rabbit"
 
 [node name="Camera2D" type="Camera2D" parent="Rabbit"]
 position = Vector2(0, 0)
@@ -96,9 +95,8 @@ profile = ExtResource("4_fox")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Fox"]
 shape = SubResource("PlayerShape")
 
-[node name="BodyArt" type="Polygon2D" parent="Fox"]
-polygon = PackedVector2Array(-16, 24, -16, -14, -8, -24, 0, -13, 8, -24, 16, -14, 16, 24)
-color = Color(0.9, 0.31, 0.13, 1)
+[node name="Visual" parent="Fox" instance=ExtResource("9_hero_visual")]
+kind = "fox"
 
 [node name="Camera2D" type="Camera2D" parent="Fox"]
 position = Vector2(0, 0)
@@ -116,6 +114,10 @@ layout_mode = 0
 mouse_filter = 2
 script = ExtResource("6_indicator")
 
+[node name="Outline" type="Polygon2D" parent="HUD/PartnerIndicator"]
+polygon = PackedVector2Array(24, 0, -16, -13, -9, 0, -16, 13)
+color = Color(0.09, 0.16, 0.29, 0.95)
+
 [node name="Arrow" type="Polygon2D" parent="HUD/PartnerIndicator"]
 polygon = PackedVector2Array(18, 0, -12, -9, -5, 11)
-color = Color(1, 0.35, 0.08, 1)
+color = Color(1, 0.83, 0.24, 1)

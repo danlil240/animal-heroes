@@ -1,0 +1,70 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://visual/cloud_factory_background.gd" id="1_bg"]
+[ext_resource type="Texture2D" path="res://art/environment/cloud_factory/factory_background.svg" id="2_factory"]
+[ext_resource type="Texture2D" path="res://art/environment/cloud_factory/gear.svg" id="3_gear"]
+[ext_resource type="Texture2D" path="res://art/environment/sunny_forest/cloud.svg" id="4_cloud"]
+
+[sub_resource type="Gradient" id="GradientSky"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.365, 0.561, 0.722, 1, 0.608, 0.776, 0.871, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTextureSky"]
+gradient = SubResource("GradientSky")
+width = 1600
+height = 800
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[node name="CloudFactoryBackground" type="Node2D"]
+z_index = -40
+script = ExtResource("1_bg")
+
+[node name="Sky" type="Sprite2D" parent="."]
+texture = SubResource("GradientTextureSky")
+centered = false
+
+[node name="CloudA" type="Sprite2D" parent="Sky"]
+position = Vector2(200, 120)
+scale = Vector2(0.7, 0.7)
+texture = ExtResource("4_cloud")
+
+[node name="CloudB" type="Sprite2D" parent="Sky"]
+position = Vector2(1100, 180)
+scale = Vector2(0.85, 0.85)
+texture = ExtResource("4_cloud")
+
+[node name="Far" type="Node2D" parent="."]
+z_index = 1
+
+[node name="Factory" type="Sprite2D" parent="Far"]
+position = Vector2(800, 590)
+texture = ExtResource("2_factory")
+
+[node name="Mid" type="Node2D" parent="."]
+z_index = 2
+
+[node name="GearA" type="Sprite2D" parent="Mid"]
+position = Vector2(180, 520)
+scale = Vector2(0.6, 0.6)
+modulate = Color(0.7, 0.8, 0.9, 0.82)
+texture = ExtResource("3_gear")
+
+[node name="GearB" type="Sprite2D" parent="Mid"]
+position = Vector2(1320, 510)
+scale = Vector2(0.55, 0.55)
+modulate = Color(0.65, 0.75, 0.85, 0.82)
+texture = ExtResource("3_gear")
+
+[node name="Frame" type="Node2D" parent="."]
+z_index = 60
+
+[node name="GearFrameA" type="Sprite2D" parent="Frame"]
+position = Vector2(60, 60)
+scale = Vector2(0.4, 0.4)
+texture = ExtResource("3_gear")
+
+[node name="GearFrameB" type="Sprite2D" parent="Frame"]
+position = Vector2(1540, 80)
+scale = Vector2(-0.38, 0.38)
+texture = ExtResource("3_gear")

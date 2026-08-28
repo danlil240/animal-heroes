@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://levels/treasure_dash_arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -6,6 +6,9 @@
 [ext_resource type="Resource" path="res://player/fox_profile.tres" id="4_fox"]
 [ext_resource type="PackedScene" path="res://ui/touch_controls.tscn" id="5_touch"]
 [ext_resource type="Script" path="res://world/partner_indicator.gd" id="6_indicator"]
+[ext_resource type="PackedScene" path="res://visual/platform_visual.tscn" id="7_platform_visual"]
+[ext_resource type="PackedScene" path="res://visual/sunny_forest_background.tscn" id="8_background"]
+[ext_resource type="PackedScene" path="res://visual/hero_visual.tscn" id="9_hero_visual"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(1800, 80)
@@ -24,6 +27,9 @@ size = Vector2(32, 48)
 
 [node name="TreasureDashArena" type="Node2D"]
 script = ExtResource("1_arena")
+level_id = "treasure_dash"
+
+[node name="SunnyForestBackground" parent="." instance=ExtResource("8_background")]
 
 [node name="RabbitSpawn" type="Marker2D" parent="." groups=["player_spawn"]]
 position = Vector2(200, 656)
@@ -37,9 +43,8 @@ position = Vector2(900, 720)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("GroundShape")
 
-[node name="GroundArt" type="Polygon2D" parent="Ground"]
-polygon = PackedVector2Array(-900, -40, 900, -40, 900, 40, -900, 40)
-color = Color(0.22, 0.48, 0.25, 1)
+[node name="Visual" parent="Ground" instance=ExtResource("7_platform_visual")]
+ground_variant = true
 
 [node name="Platform1" type="StaticBody2D" parent="." groups=["td_platform"]]
 position = Vector2(450, 610)
@@ -47,9 +52,7 @@ position = Vector2(450, 610)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform1"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform1"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform1" instance=ExtResource("7_platform_visual")]
 
 [node name="Platform2" type="StaticBody2D" parent="." groups=["td_platform"]]
 position = Vector2(900, 540)
@@ -57,9 +60,7 @@ position = Vector2(900, 540)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform2"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform2"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform2" instance=ExtResource("7_platform_visual")]
 
 [node name="Platform3" type="StaticBody2D" parent="." groups=["td_platform"]]
 position = Vector2(1350, 610)
@@ -67,9 +68,7 @@ position = Vector2(1350, 610)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform3"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform3"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform3" instance=ExtResource("7_platform_visual")]
 
 [node name="Platform4" type="StaticBody2D" parent="." groups=["td_platform"]]
 position = Vector2(300, 470)
@@ -77,9 +76,7 @@ position = Vector2(300, 470)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform4"]
 shape = SubResource("SmallPlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform4"]
-polygon = PackedVector2Array(-70, -10, 70, -10, 70, 10, -70, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform4" instance=ExtResource("7_platform_visual")]
 
 [node name="Platform5" type="StaticBody2D" parent="." groups=["td_platform"]]
 position = Vector2(1500, 470)
@@ -87,9 +84,7 @@ position = Vector2(1500, 470)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platform5"]
 shape = SubResource("SmallPlatformShape")
 
-[node name="Art" type="Polygon2D" parent="Platform5"]
-polygon = PackedVector2Array(-70, -10, 70, -10, 70, 10, -70, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="Platform5" instance=ExtResource("7_platform_visual")]
 
 [node name="SpawnPoint01" type="Marker2D" parent="." groups=["td_spawn_point"]]
 position = Vector2(300, 656)
@@ -143,9 +138,8 @@ profile = ExtResource("3_rabbit")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Rabbit"]
 shape = SubResource("PlayerShape")
 
-[node name="BodyArt" type="Polygon2D" parent="Rabbit"]
-polygon = PackedVector2Array(-16, 24, -16, -14, -8, -24, 0, -13, 8, -24, 16, -14, 16, 24)
-color = Color(0.88, 0.88, 0.93, 1)
+[node name="Visual" parent="Rabbit" instance=ExtResource("9_hero_visual")]
+kind = "rabbit"
 
 [node name="Camera2D" type="Camera2D" parent="Rabbit"]
 position = Vector2(0, 0)
@@ -162,9 +156,8 @@ profile = ExtResource("4_fox")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Fox"]
 shape = SubResource("PlayerShape")
 
-[node name="BodyArt" type="Polygon2D" parent="Fox"]
-polygon = PackedVector2Array(-16, 24, -16, -14, -8, -24, 0, -13, 8, -24, 16, -14, 16, 24)
-color = Color(0.9, 0.31, 0.13, 1)
+[node name="Visual" parent="Fox" instance=ExtResource("9_hero_visual")]
+kind = "fox"
 
 [node name="Camera2D" type="Camera2D" parent="Fox"]
 position = Vector2(0, 0)
@@ -182,6 +175,10 @@ layout_mode = 0
 mouse_filter = 2
 script = ExtResource("6_indicator")
 
+[node name="Outline" type="Polygon2D" parent="HUD/PartnerIndicator"]
+polygon = PackedVector2Array(24, 0, -16, -13, -9, 0, -16, 13)
+color = Color(0.09, 0.16, 0.29, 0.95)
+
 [node name="Arrow" type="Polygon2D" parent="HUD/PartnerIndicator"]
 polygon = PackedVector2Array(18, 0, -12, -9, -5, 11)
-color = Color(1, 0.35, 0.08, 1)
+color = Color(1, 0.83, 0.24, 1)

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://art/characters/robot_boss.svg" id="1_tex"]
+
+[node name="BossVisual" type="Sprite2D"]
+texture = ExtResource("1_tex")
