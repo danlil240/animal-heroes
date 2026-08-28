@@ -1,0 +1,27 @@
+extends Control
+
+
+const STATE_MESSAGES := {
+	"discovering": "מחפש משחק…",
+	"connecting": "מתחבר…",
+	"lobby": "מחכים לשחקן נוסף",
+	"playing": "מתחילים!",
+}
+
+
+func _ready() -> void:
+	var session = get_node_or_null("/root/Session")
+	if session != null:
+		session.state_changed.connect(show_state)
+		show_state(session.state)
+
+
+func show_state(state: String) -> void:
+	get_node("Panel/Status").text = STATE_MESSAGES.get(state, "")
+	visible = state != "idle"
+	if state != "discovering":
+		get_node("Panel/ManualIp").visible = false
+
+
+func show_discovery_timeout() -> void:
+	get_node("Panel/ManualIp").visible = true
