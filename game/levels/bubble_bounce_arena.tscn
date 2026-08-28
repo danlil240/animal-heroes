@@ -32,7 +32,6 @@ size = Vector2(80, 80)
 
 [node name="BubbleBounceArena" type="Node2D"]
 script = ExtResource("1_arena")
-level_id = "bubble_bounce"
 
 [node name="SunnyForestBackground" parent="." instance=ExtResource("8_background")]
 

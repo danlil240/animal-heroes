@@ -36,7 +36,6 @@ size = Vector2(120, 120)
 
 [node name="StarRaceArena" type="Node2D"]
 script = ExtResource("1_arena")
-level_id = "star_race"
 
 [node name="SunnyForestBackground" parent="." instance=ExtResource("9_background")]
 

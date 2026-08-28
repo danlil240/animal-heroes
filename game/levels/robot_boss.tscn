@@ -25,7 +25,6 @@ size = Vector2(210, 20)
 
 [node name="RobotBossArena" type="Node2D"]
 script = ExtResource("1_boss")
-level_id = "robot_boss"
 
 [node name="CloudFactoryBackground" parent="." instance=ExtResource("8_background")]
 
