@@ -102,6 +102,11 @@ func _test_touch_layout(layout: Vector2) -> bool:
 			return _fail_bool("touch target %s must be at least 96 px at %s" % [touch_target.name, layout])
 		if not _within(controls, touch_target):
 			return _fail_bool("touch target %s must not overflow at %s" % [touch_target.name, layout])
+	var screen_midpoint := layout.x * 0.5
+	if controls.get_node("Movement/Left").get_global_rect().get_center().x >= screen_midpoint or controls.get_node("Movement/Right").get_global_rect().get_center().x >= screen_midpoint:
+		return _fail_bool("movement controls must remain on the lower-left at %s" % layout)
+	if controls.get_node("Jump").get_global_rect().get_center().x <= screen_midpoint or controls.get_node("Action").get_global_rect().get_center().x <= screen_midpoint:
+		return _fail_bool("jump and action controls must remain on the lower-right at %s" % layout)
 	root.remove_child(controls)
 	controls.queue_free()
 	return true

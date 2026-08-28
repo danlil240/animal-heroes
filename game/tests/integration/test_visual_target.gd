@@ -46,6 +46,8 @@ func _run() -> void:
 		return
 	if not _test_indicator_presentation():
 		return
+	if not _test_complete_arena_composition():
+		return
 	quit(0)
 
 
@@ -131,6 +133,27 @@ func _test_indicator_presentation() -> bool:
 	var arrow := indicator.get_node("Arrow") as Polygon2D
 	if arrow.color == Color(1.0, 0.35, 0.08, 1.0):
 		return _fail_bool("partner indicator must use the shared gold reward language")
+	arena.queue_free()
+	return true
+
+
+func _test_complete_arena_composition() -> bool:
+	var arena = load("res://levels/test_arena.tscn").instantiate()
+	root.add_child(arena)
+	var background := arena.get_node_or_null("SunnyForestBackground") as Node2D
+	if background == null or background.z_index >= 0:
+		return _fail_bool("arena must compose the sunny forest background behind gameplay")
+	if arena.get_node("Collectibles").get_child_count() != 10:
+		return _fail_bool("complete arena must preserve ten collectible markers")
+	for hero_name in ["Rabbit", "Fox"]:
+		var hero: CharacterBody2D = arena.get_node(hero_name)
+		if hero.get_node_or_null("CollisionShape2D") == null or hero.get_node_or_null("Camera2D") == null or hero.get_node_or_null("Visual") == null:
+			return _fail_bool("complete arena must preserve %s gameplay and presentation" % hero_name)
+	var controls: Control = arena.get_node("HUD/TouchControls")
+	for path in ["Movement/Left", "Movement/Right", "Jump", "Action"]:
+		var target := controls.get_node(path) as Control
+		if target.custom_minimum_size.x < 128.0 or target.custom_minimum_size.y < 128.0:
+			return _fail_bool("%s must retain a 128 pixel touch target" % path)
 	arena.queue_free()
 	return true
 

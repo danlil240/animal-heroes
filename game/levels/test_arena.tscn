@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=19 format=3]
 
 [ext_resource type="Script" path="res://levels/test_arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" path="res://visual/star_collectible_visual.tscn" id="8_star_visual"]
 [ext_resource type="PackedScene" path="res://visual/checkpoint_visual.tscn" id="9_checkpoint_visual"]
 [ext_resource type="PackedScene" path="res://visual/hero_visual.tscn" id="10_hero_visual"]
+[ext_resource type="PackedScene" path="res://visual/sunny_forest_background.tscn" id="11_background"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(1600, 80)
@@ -28,6 +29,8 @@ size = Vector2(72, 72)
 
 [node name="TestArena" type="Node2D"]
 script = ExtResource("1_arena")
+
+[node name="SunnyForestBackground" parent="." instance=ExtResource("11_background")]
 
 [node name="RabbitSpawn" type="Marker2D" parent="."]
 position = Vector2(80, 656)

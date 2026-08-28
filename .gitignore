@@ -3,4 +3,5 @@
 .tools/
 build/
 *.tmp
-
+game/.godot/
+*.gd.uid
