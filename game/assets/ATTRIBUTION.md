@@ -1,7 +1,8 @@
 # Asset Attribution
 
-All visual and audio assets in Animal Heroes are original works created
-specifically for this project.
+The visual assets in Animal Heroes are original works created specifically for
+this project. Audio authorship and licensing are unresolved pending provenance
+review; see the Audio Assets section below.
 
 ## Visual Assets
 
