@@ -42,6 +42,8 @@ func _run() -> void:
 		return
 	if not _test_reward_presentation():
 		return
+	if not await _test_hero_presentation():
+		return
 	quit(0)
 
 
@@ -91,6 +93,29 @@ func _test_reward_presentation() -> bool:
 			return _fail_bool("every collectible marker must keep its group and gain a Visual child")
 	if arena.get_node_or_null("Checkpoint/Visual") == null:
 		return _fail_bool("checkpoint must gain a separate Visual child")
+	arena.queue_free()
+	return true
+
+
+func _test_hero_presentation() -> bool:
+	var visual_scene: PackedScene = load("res://visual/hero_visual.tscn")
+	if visual_scene == null:
+		return _fail_bool("hero visual scene must load")
+	var arena = load("res://levels/test_arena.tscn").instantiate()
+	root.add_child(arena)
+	await process_frame
+	for hero_name in ["Rabbit", "Fox"]:
+		var hero: CharacterBody2D = arena.get_node(hero_name)
+		var visual = hero.get_node_or_null("Visual")
+		if visual == null or hero.get_node_or_null("CollisionShape2D") == null or hero.get_node_or_null("Camera2D") == null:
+			return _fail_bool("%s must keep gameplay nodes and gain a Visual child" % hero_name)
+		if hero.get_node_or_null("BodyArt") != null:
+			return _fail_bool("%s must not retain placeholder body art" % hero_name)
+		var before_position := hero.position
+		var before_velocity := hero.velocity
+		visual._process(1.0 / 30.0)
+		if hero.position != before_position or hero.velocity != before_velocity:
+			return _fail_bool("hero presentation must not mutate %s physics state" % hero_name)
 	arena.queue_free()
 	return true
 

@@ -16,6 +16,7 @@ const TIMER_EPSILON: float = 0.000001
 
 var hearts: int = 0
 var checkpoint_position: Vector2 = Vector2.ZERO
+var facing_direction: float = 1.0
 
 var _input_axis: float = 0.0
 var _jump_pressed: bool = false
@@ -40,6 +41,8 @@ func _physics_process(delta: float) -> void:
 func apply_input(frame: PlayerInputScript.InputFrame) -> void:
 	_ensure_initialized()
 	_input_axis = clampf(frame.axis, -1.0, 1.0)
+	if absf(_input_axis) > 0.01:
+		facing_direction = signf(_input_axis)
 	if frame.jump and not _jump_pressed:
 		_jump_buffer_remaining = JUMP_BUFFER_TIME
 	_jump_pressed = frame.jump

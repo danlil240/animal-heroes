@@ -29,6 +29,14 @@ func _run() -> void:
 	if not is_equal_approx(rabbit_body.position.x - 500.0, 8.0) or not is_equal_approx(fox_body.position.x - 700.0, 22.0 / 3.0):
 		_fail("equal input must move rabbit 8 pixels and fox 22/3 pixels in one physics tick")
 		return
+	if rabbit_body.facing_direction != 1.0:
+		_fail("positive input must face the rabbit right")
+		return
+	rabbit_body.apply_input(_frame(-1.0))
+	rabbit_body.physics_step(0.0)
+	if rabbit_body.facing_direction != -1.0:
+		_fail("negative input must face the rabbit left")
+		return
 
 	if not await _test_jump_and_landing(rabbit, -50.0):
 		return
