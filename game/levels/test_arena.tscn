@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://levels/test_arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -6,6 +6,7 @@
 [ext_resource type="Resource" path="res://player/fox_profile.tres" id="4_fox"]
 [ext_resource type="PackedScene" path="res://ui/touch_controls.tscn" id="5_touch"]
 [ext_resource type="Script" path="res://world/partner_indicator.gd" id="6_indicator"]
+[ext_resource type="PackedScene" path="res://visual/platform_visual.tscn" id="7_platform_visual"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(1600, 80)
@@ -43,9 +44,8 @@ position = Vector2(670, 720)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("GroundShape")
 
-[node name="GroundArt" type="Polygon2D" parent="Ground"]
-polygon = PackedVector2Array(-800, -40, 800, -40, 800, 40, -800, 40)
-color = Color(0.22, 0.48, 0.25, 1)
+[node name="Visual" parent="Ground" instance=ExtResource("7_platform_visual")]
+ground_variant = true
 
 [node name="PlatformA" type="StaticBody2D" parent="." groups=["arena_platform"]]
 position = Vector2(350, 650)
@@ -53,9 +53,7 @@ position = Vector2(350, 650)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformA"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="PlatformA"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="PlatformA" instance=ExtResource("7_platform_visual")]
 
 [node name="PlatformB" type="StaticBody2D" parent="." groups=["arena_platform"]]
 position = Vector2(620, 650)
@@ -63,9 +61,7 @@ position = Vector2(620, 650)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformB"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="PlatformB"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="PlatformB" instance=ExtResource("7_platform_visual")]
 
 [node name="PlatformC" type="StaticBody2D" parent="." groups=["arena_platform"]]
 position = Vector2(890, 650)
@@ -73,9 +69,7 @@ position = Vector2(890, 650)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformC"]
 shape = SubResource("PlatformShape")
 
-[node name="Art" type="Polygon2D" parent="PlatformC"]
-polygon = PackedVector2Array(-105, -10, 105, -10, 105, 10, -105, 10)
-color = Color(0.55, 0.31, 0.12, 1)
+[node name="Visual" parent="PlatformC" instance=ExtResource("7_platform_visual")]
 
 [node name="Collectibles" type="Node2D" parent="."]
 

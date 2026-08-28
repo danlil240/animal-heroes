@@ -38,6 +38,8 @@ func _run() -> void:
 		return
 	if not await _test_background_parallax():
 		return
+	if not _test_platform_presentation():
+		return
 	quit(0)
 
 
@@ -55,6 +57,20 @@ func _test_background_parallax() -> bool:
 	if is_equal_approx(background.get_node("Far").position.x, background.get_node("Mid").position.x):
 		return _fail_bool("far and mid forest layers must use different parallax ratios")
 	background.queue_free()
+	return true
+
+
+func _test_platform_presentation() -> bool:
+	var arena_scene: PackedScene = load("res://levels/test_arena.tscn")
+	var arena = arena_scene.instantiate()
+	root.add_child(arena)
+	for body_name in ["Ground", "PlatformA", "PlatformB", "PlatformC"]:
+		var body := arena.get_node(body_name)
+		if body.get_node_or_null("CollisionShape2D") == null or body.get_node_or_null("Visual") == null:
+			return _fail_bool("%s must keep collision and gain a separate Visual child" % body_name)
+		if body.get_node_or_null("GroundArt") != null or body.get_node_or_null("Art") != null:
+			return _fail_bool("%s must not retain placeholder polygon art" % body_name)
+	arena.queue_free()
 	return true
 
 
