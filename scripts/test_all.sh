@@ -9,3 +9,4 @@ bash scripts/run_lan_pair.sh
 bash scripts/run_reconnect_pair.sh
 "$GODOT_BIN" --headless --path game -s res://tests/device/performance_check.gd
 bash game/tests/device/test_apk_permissions.sh
+bash game/tests/device/test_device_smoke.sh

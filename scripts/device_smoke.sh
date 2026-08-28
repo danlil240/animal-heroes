@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Dual SM-T220 tablet smoke and endurance test.
-# Installs the APK on both tablets, runs automated host/client sessions,
-# and captures frame-time, memory, thermal, and reconnect metrics.
+# Installs the APK on both tablets and captures before/after device evidence.
+# The operator performs the in-game host/join and Cloud Factory traversal.
 #
 # Prerequisites: Both tablets connected via USB with adb authorization,
 # debug APK built via scripts/build_android.sh.
@@ -13,7 +13,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build"
 APK="$BUILD_DIR/animal-heroes-debug.apk"
-RESULTS_DIR="$ROOT_DIR/docs/test-results"
+RESULTS_DIR="${SMOKE_RESULTS_DIR:-$ROOT_DIR/docs/test-results}"
+SMOKE_DURATION_SECONDS="${SMOKE_DURATION_SECONDS:-600}"
 
 source "$SCRIPT_DIR/android_tools.sh"
 resolve_android_tools
@@ -32,11 +33,41 @@ if [[ ! -f "$APK" ]]; then
   exit 2
 fi
 
+if ! [[ "$SMOKE_DURATION_SECONDS" =~ ^[0-9]+$ ]]; then
+  echo "SMOKE_DURATION_SECONDS must be a non-negative number of seconds." >&2
+  exit 2
+fi
+
 mkdir -p "$RESULTS_DIR"
 
+require_sm_t220() {
+  local role="$1"
+  local serial="$2"
+  local model
+  model="$("$ADB_BIN" -s "$serial" shell getprop ro.product.model)"
+  if [[ "$model" != "SM-T220" ]]; then
+    echo "ERROR: $role device $serial must report exactly SM-T220; got: $model" >&2
+    exit 2
+  fi
+}
+
+capture_snapshot() {
+  local role="$1"
+  local serial="$2"
+  local timing="$3"
+  local prefix="$RESULTS_DIR/${role}-${timing}"
+
+  "$ADB_BIN" -s "$serial" shell getprop ro.product.model > "${prefix}-model.txt"
+  "$ADB_BIN" -s "$serial" shell dumpsys gfxinfo org.danlil.animalheroes > "${prefix}-gfxinfo.txt"
+  "$ADB_BIN" -s "$serial" shell dumpsys meminfo org.danlil.animalheroes > "${prefix}-meminfo.txt"
+  "$ADB_BIN" -s "$serial" shell dumpsys thermalservice > "${prefix}-thermalservice.txt"
+  "$ADB_BIN" -s "$serial" shell dumpsys battery > "${prefix}-battery.txt"
+  "$ADB_BIN" -s "$serial" logcat -d > "${prefix}-logcat.txt"
+}
+
 echo "=== Device check ==="
-"$ADB_BIN" -s "$HOST_SERIAL" shell getprop ro.product.model
-"$ADB_BIN" -s "$CLIENT_SERIAL" shell getprop ro.product.model
+require_sm_t220 "host" "$HOST_SERIAL"
+require_sm_t220 "client" "$CLIENT_SERIAL"
 
 echo "=== Installing APK on both tablets ==="
 "$ADB_BIN" -s "$HOST_SERIAL" install -r "$APK"
@@ -49,6 +80,10 @@ echo "=== Clearing logs ==="
 "$ADB_BIN" -s "$HOST_SERIAL" logcat -c
 "$ADB_BIN" -s "$CLIENT_SERIAL" logcat -c
 
+echo "=== Capturing before-run device evidence ==="
+capture_snapshot "host" "$HOST_SERIAL" "before"
+capture_snapshot "client" "$CLIENT_SERIAL" "before"
+
 echo "=== Launching host ==="
 "$ADB_BIN" -s "$HOST_SERIAL" shell am start -n org.danlil.animalheroes/org.godotengine.godot.GodotApp
 
@@ -56,19 +91,15 @@ echo "=== Launching client ==="
 sleep 3
 "$ADB_BIN" -s "$CLIENT_SERIAL" shell am start -n org.danlil.animalheroes/org.godotengine.godot.GodotApp
 
-echo "=== Running 10-minute endurance capture ==="
-sleep 600
+echo "=== Operator-driven 10-minute gameplay interval ==="
+echo "On both tablets, host/join the game and traverse Cloud Factory during this interval."
+echo "Launching the app processes does not automatically perform gameplay."
+sleep "$SMOKE_DURATION_SECONDS"
 
-echo "=== Collecting results ==="
-"$ADB_BIN" -s "$HOST_SERIAL" logcat -d > "$RESULTS_DIR/host-logcat.txt"
-"$ADB_BIN" -s "$CLIENT_SERIAL" logcat -d > "$RESULTS_DIR/client-logcat.txt"
-
-echo "=== Capturing performance metrics ==="
-"$ADB_BIN" -s "$HOST_SERIAL" shell dumpsys gfxinfo org.danlil.animalheroes > "$RESULTS_DIR/host-gfxinfo.txt" 2>&1 || true
-"$ADB_BIN" -s "$CLIENT_SERIAL" shell dumpsys gfxinfo org.danlil.animalheroes > "$RESULTS_DIR/client-gfxinfo.txt" 2>&1 || true
-"$ADB_BIN" -s "$HOST_SERIAL" shell dumpsys meminfo org.danlil.animalheroes > "$RESULTS_DIR/host-meminfo.txt" 2>&1 || true
-"$ADB_BIN" -s "$CLIENT_SERIAL" shell dumpsys meminfo org.danlil.animalheroes > "$RESULTS_DIR/client-meminfo.txt" 2>&1 || true
+echo "=== Capturing after-run device evidence ==="
+capture_snapshot "host" "$HOST_SERIAL" "after"
+capture_snapshot "client" "$CLIENT_SERIAL" "after"
 
 echo "=== Done. Results in $RESULTS_DIR/ ==="
-echo "Review frame-time percentiles, memory, and thermal status."
+echo "Review before/after frame-time, memory, thermal, battery, and logcat evidence."
 echo "Record findings in docs/test-results/sm-t220-performance.md"
