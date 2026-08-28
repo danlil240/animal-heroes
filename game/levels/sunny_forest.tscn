@@ -48,6 +48,7 @@ size = Vector2(40, 40)
 
 [node name="SunnyForest" type="Node2D"]
 script = ExtResource("1_forest")
+level_id = "sunny_forest"
 
 [node name="SunnyForestBackground" parent="." instance=ExtResource("15_background")]
 

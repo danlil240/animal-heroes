@@ -46,6 +46,7 @@ size = Vector2(100, 100)
 
 [node name="CloudFactory" type="Node2D"]
 script = ExtResource("1_factory")
+level_id = "cloud_factory"
 enemy_budget = 10
 projectile_budget = 20
 particle_budget = 64
