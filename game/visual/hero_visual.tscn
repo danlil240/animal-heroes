@@ -1,0 +1,27 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://visual/hero_visual.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://art/characters/riki_rabbit.svg" id="2_rabbit"]
+[ext_resource type="Texture2D" path="res://art/characters/foxy_fox.svg" id="3_fox"]
+[ext_resource type="Texture2D" path="res://art/effects/bubble_ring.svg" id="4_bubble"]
+
+[node name="HeroVisual" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Pose" type="Node2D" parent="."]
+position = Vector2(0, -30)
+
+[node name="RabbitArt" type="Sprite2D" parent="Pose"]
+position = Vector2(0, -19)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_rabbit")
+
+[node name="FoxArt" type="Sprite2D" parent="Pose"]
+position = Vector2(0, -16)
+scale = Vector2(0.52, 0.52)
+texture = ExtResource("3_fox")
+
+[node name="ActionBubble" type="Sprite2D" parent="Pose"]
+position = Vector2(58, -25)
+scale = Vector2(0.25, 0.25)
+texture = ExtResource("4_bubble")

@@ -1,0 +1,16 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://visual/platform_visual.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://art/environment/sunny_forest/platform_ground.svg" id="2_ground"]
+[ext_resource type="Texture2D" path="res://art/environment/sunny_forest/platform_small.svg" id="3_small"]
+
+[node name="PlatformVisual" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Ground" type="Sprite2D" parent="."]
+position = Vector2(0, 35)
+texture = ExtResource("2_ground")
+
+[node name="Small" type="Sprite2D" parent="."]
+position = Vector2(0, 47.5)
+texture = ExtResource("3_small")

@@ -27,6 +27,7 @@ func _physics_process(_delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	partner_indicator.update_for_world_positions(_local_hero().global_position, _remote_hero().global_position)
+	$SunnyForestBackground.set_focus_x(_local_hero().global_position.x)
 
 
 func configure_local_role(role: String) -> void:
@@ -92,3 +93,6 @@ func _activate_checkpoint(body: Node2D) -> void:
 		return
 	for hero in [rabbit, fox]:
 		hero.checkpoint_position = $Checkpoint.global_position
+	var visual := $Checkpoint.get_node_or_null("Visual")
+	if visual != null and visual.has_method("set_active"):
+		visual.set_active(true)
