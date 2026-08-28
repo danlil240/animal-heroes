@@ -92,3 +92,6 @@ func _activate_checkpoint(body: Node2D) -> void:
 		return
 	for hero in [rabbit, fox]:
 		hero.checkpoint_position = $Checkpoint.global_position
+	var visual := $Checkpoint.get_node_or_null("Visual")
+	if visual != null and visual.has_method("set_active"):
+		visual.set_active(true)

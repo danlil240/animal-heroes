@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://visual/collectible_visual.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://art/collectibles/star_friend.svg" id="2_star"]
+
+[node name="StarCollectibleVisual" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Glow" type="PointLight2D" parent="."]
+enabled = false
+
+[node name="Art" type="Sprite2D" parent="."]
+scale = Vector2(0.58, 0.58)
+texture = ExtResource("2_star")

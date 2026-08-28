@@ -40,6 +40,8 @@ func _run() -> void:
 		return
 	if not _test_platform_presentation():
 		return
+	if not _test_reward_presentation():
+		return
 	quit(0)
 
 
@@ -70,6 +72,25 @@ func _test_platform_presentation() -> bool:
 			return _fail_bool("%s must keep collision and gain a separate Visual child" % body_name)
 		if body.get_node_or_null("GroundArt") != null or body.get_node_or_null("Art") != null:
 			return _fail_bool("%s must not retain placeholder polygon art" % body_name)
+	arena.queue_free()
+	return true
+
+
+func _test_reward_presentation() -> bool:
+	var star_scene: PackedScene = load("res://visual/star_collectible_visual.tscn")
+	var checkpoint_scene: PackedScene = load("res://visual/checkpoint_visual.tscn")
+	if star_scene == null or checkpoint_scene == null:
+		return _fail_bool("star and checkpoint visual scenes must load")
+	var arena = load("res://levels/test_arena.tscn").instantiate()
+	root.add_child(arena)
+	var collectibles: Array[Node] = arena.get_node("Collectibles").get_children()
+	if collectibles.size() != 10:
+		return _fail_bool("visual conversion must preserve exactly ten collectible markers")
+	for star in collectibles:
+		if not star.is_in_group("arena_collectible") or star.get_node_or_null("Visual") == null:
+			return _fail_bool("every collectible marker must keep its group and gain a Visual child")
+	if arena.get_node_or_null("Checkpoint/Visual") == null:
+		return _fail_bool("checkpoint must gain a separate Visual child")
 	arena.queue_free()
 	return true
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://levels/test_arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" path="res://ui/touch_controls.tscn" id="5_touch"]
 [ext_resource type="Script" path="res://world/partner_indicator.gd" id="6_indicator"]
 [ext_resource type="PackedScene" path="res://visual/platform_visual.tscn" id="7_platform_visual"]
+[ext_resource type="PackedScene" path="res://visual/star_collectible_visual.tscn" id="8_star_visual"]
+[ext_resource type="PackedScene" path="res://visual/checkpoint_visual.tscn" id="9_checkpoint_visual"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(1600, 80)
@@ -37,6 +39,8 @@ position = Vector2(1200, 656)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Checkpoint"]
 shape = SubResource("CheckpointShape")
+
+[node name="Visual" parent="Checkpoint" instance=ExtResource("9_checkpoint_visual")]
 
 [node name="Ground" type="StaticBody2D" parent="." groups=["arena_safe_ground"]]
 position = Vector2(670, 720)
@@ -73,55 +77,64 @@ shape = SubResource("PlatformShape")
 
 [node name="Collectibles" type="Node2D" parent="."]
 
-[node name="Star01" type="Polygon2D" parent="Collectibles" groups=["arena_collectible"]]
+[node name="Star01" type="Node2D" parent="Collectibles" groups=["arena_collectible"]]
 position = Vector2(220, 540)
-polygon = PackedVector2Array(0, -16, 5, -5, 16, -5, 8, 3, 10, 15, 0, 9, -10, 15, -8, 3, -16, -5, -5, -5)
-color = Color(1, 0.87, 0.15, 1)
 
-[node name="Star02" type="Polygon2D" parent="Collectibles" groups=["arena_collectible"]]
+[node name="Visual" parent="Collectibles/Star01" instance=ExtResource("8_star_visual")]
+
+[node name="Star02" type="Node2D" parent="Collectibles" groups=["arena_collectible"]]
 position = Vector2(350, 540)
-polygon = PackedVector2Array(0, -16, 5, -5, 16, -5, 8, 3, 10, 15, 0, 9, -10, 15, -8, 3, -16, -5, -5, -5)
-color = Color(1, 0.87, 0.15, 1)
 
-[node name="Star03" type="Polygon2D" parent="Collectibles" groups=["arena_collectible"]]
+[node name="Visual" parent="Collectibles/Star02" instance=ExtResource("8_star_visual")]
+phase_offset = 0.6
+
+[node name="Star03" type="Node2D" parent="Collectibles" groups=["arena_collectible"]]
 position = Vector2(480, 540)
-polygon = PackedVector2Array(0, -16, 5, -5, 16, -5, 8, 3, 10, 15, 0, 9, -10, 15, -8, 3, -16, -5, -5, -5)
-color = Color(1, 0.87, 0.15, 1)
 
-[node name="Star04" type="Polygon2D" parent="Collectibles" groups=["arena_collectible"]]
+[node name="Visual" parent="Collectibles/Star03" instance=ExtResource("8_star_visual")]
+phase_offset = 1.2
+
+[node name="Star04" type="Node2D" parent="Collectibles" groups=["arena_collectible"]]
 position = Vector2(610, 540)
-polygon = PackedVector2Array(0, -16, 5, -5, 16, -5, 8, 3, 10, 15, 0, 9, -10, 15, -8, 3, -16, -5, -5, -5)
-color = Color(1, 0.87, 0.15, 1)
 
-[node name="Star05" type="Polygon2D" parent="Collectibles" groups=["arena_collectible"]]
+[node name="Visual" parent="Collectibles/Star04" instance=ExtResource("8_star_visual")]
+phase_offset = 1.8
+
+[node name="Star05" type="Node2D" parent="Collectibles" groups=["arena_collectible"]]
 position = Vector2(740, 540)
-polygon = PackedVector2Array(0, -16, 5, -5, 16, -5, 8, 3, 10, 15, 0, 9, -10, 15, -8, 3, -16, -5, -5, -5)
-color = Color(1, 0.87, 0.15, 1)
 
-[node name="Star06" type="Polygon2D" parent="Collectibles" groups=["arena_collectible"]]
+[node name="Visual" parent="Collectibles/Star05" instance=ExtResource("8_star_visual")]
+phase_offset = 2.4
+
+[node name="Star06" type="Node2D" parent="Collectibles" groups=["arena_collectible"]]
 position = Vector2(870, 540)
-polygon = PackedVector2Array(0, -16, 5, -5, 16, -5, 8, 3, 10, 15, 0, 9, -10, 15, -8, 3, -16, -5, -5, -5)
-color = Color(1, 0.87, 0.15, 1)
 
-[node name="Star07" type="Polygon2D" parent="Collectibles" groups=["arena_collectible"]]
+[node name="Visual" parent="Collectibles/Star06" instance=ExtResource("8_star_visual")]
+phase_offset = 3.0
+
+[node name="Star07" type="Node2D" parent="Collectibles" groups=["arena_collectible"]]
 position = Vector2(1000, 540)
-polygon = PackedVector2Array(0, -16, 5, -5, 16, -5, 8, 3, 10, 15, 0, 9, -10, 15, -8, 3, -16, -5, -5, -5)
-color = Color(1, 0.87, 0.15, 1)
 
-[node name="Star08" type="Polygon2D" parent="Collectibles" groups=["arena_collectible"]]
+[node name="Visual" parent="Collectibles/Star07" instance=ExtResource("8_star_visual")]
+phase_offset = 3.6
+
+[node name="Star08" type="Node2D" parent="Collectibles" groups=["arena_collectible"]]
 position = Vector2(1130, 540)
-polygon = PackedVector2Array(0, -16, 5, -5, 16, -5, 8, 3, 10, 15, 0, 9, -10, 15, -8, 3, -16, -5, -5, -5)
-color = Color(1, 0.87, 0.15, 1)
 
-[node name="Star09" type="Polygon2D" parent="Collectibles" groups=["arena_collectible"]]
+[node name="Visual" parent="Collectibles/Star08" instance=ExtResource("8_star_visual")]
+phase_offset = 4.2
+
+[node name="Star09" type="Node2D" parent="Collectibles" groups=["arena_collectible"]]
 position = Vector2(420, 470)
-polygon = PackedVector2Array(0, -16, 5, -5, 16, -5, 8, 3, 10, 15, 0, 9, -10, 15, -8, 3, -16, -5, -5, -5)
-color = Color(1, 0.87, 0.15, 1)
 
-[node name="Star10" type="Polygon2D" parent="Collectibles" groups=["arena_collectible"]]
+[node name="Visual" parent="Collectibles/Star09" instance=ExtResource("8_star_visual")]
+phase_offset = 4.8
+
+[node name="Star10" type="Node2D" parent="Collectibles" groups=["arena_collectible"]]
 position = Vector2(920, 470)
-polygon = PackedVector2Array(0, -16, 5, -5, 16, -5, 8, 3, 10, 15, 0, 9, -10, 15, -8, 3, -16, -5, -5, -5)
-color = Color(1, 0.87, 0.15, 1)
+
+[node name="Visual" parent="Collectibles/Star10" instance=ExtResource("8_star_visual")]
+phase_offset = 5.4
 
 [node name="FallRespawn" type="Area2D" parent="."]
 position = Vector2(670, 930)
