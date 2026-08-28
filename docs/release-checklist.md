@@ -25,7 +25,7 @@ supervised usability result.
 
 | Artifact | Status |
 | --- | --- |
-| `build/animal-heroes-debug.apk` | PASS — 2026-08-29; Godot 4.7.2.stable.official; 29,714,438 bytes; SHA-256 `faad013f144372c8fc2f4b2dc6ca29b6297b674c5927638307f5ec935e2c93c6` |
+| `build/animal-heroes-debug.apk` | PASS — 2026-08-29; Godot 4.7.2.stable.official; 29,714,438 bytes; SHA-256 `f614d5d81fd9ab3cffa9707c5febc6d475550cd0c5d24af36865401316d51542` |
 | `build/animal-heroes-debug.apk.sha256` | PASS — verified with `sha256sum --check` on 2026-08-29 |
 | `build/animal-heroes-release.apk` | PENDING (no keystore) |
 | `build/animal-heroes-release.apk.sha256` | PENDING |

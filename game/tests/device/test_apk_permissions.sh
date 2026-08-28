@@ -49,6 +49,26 @@ uses-permission: name='android.permission.INTERNET'
 uses-permission: name='android.permission.BLUETOOTH_CONNECT'
 PERMISSIONS
     ;;
+  custom)
+    cat <<'PERMISSIONS'
+package: org.danlil.animalheroes
+uses-permission: name='android.permission.ACCESS_NETWORK_STATE'
+uses-permission: name='android.permission.ACCESS_WIFI_STATE'
+uses-permission: name='android.permission.CHANGE_WIFI_MULTICAST_STATE'
+uses-permission: name='android.permission.INTERNET'
+uses-permission: name='com.example.permission.SENSITIVE'
+PERMISSIONS
+    ;;
+  sdk23)
+    cat <<'PERMISSIONS'
+package: org.danlil.animalheroes
+uses-permission: name='android.permission.ACCESS_NETWORK_STATE'
+uses-permission: name='android.permission.ACCESS_WIFI_STATE'
+uses-permission: name='android.permission.CHANGE_WIFI_MULTICAST_STATE'
+uses-permission: name='android.permission.INTERNET'
+uses-permission-sdk-23: name='android.permission.POST_NOTIFICATIONS'
+PERMISSIONS
+    ;;
 esac
 EOF
 chmod +x "$SDK_DIR/build-tools/1.0.0/aapt"
@@ -86,6 +106,12 @@ assert_case "exact LAN permission set passes" 0 "PASS: APK permissions exactly m
 
 assert_case "extra permission is rejected" 1 "FAIL: APK permissions must exactly match the allowed LAN set." \
   env -u ADB_BIN -u AAPT_BIN ANDROID_SDK_ROOT="$SDK_DIR" FAKE_AAPT_MODE=extra bash "$AUDIT_SCRIPT" "$APK"
+
+assert_case "custom permission is rejected" 1 "FAIL: APK permissions must exactly match the allowed LAN set." \
+  env -u ADB_BIN -u AAPT_BIN ANDROID_SDK_ROOT="$SDK_DIR" FAKE_AAPT_MODE=custom bash "$AUDIT_SCRIPT" "$APK"
+
+assert_case "uses-permission-sdk-23 entry is rejected" 1 "FAIL: APK permissions must exactly match the allowed LAN set." \
+  env -u ADB_BIN -u AAPT_BIN ANDROID_SDK_ROOT="$SDK_DIR" FAKE_AAPT_MODE=sdk23 bash "$AUDIT_SCRIPT" "$APK"
 
 rm -rf "$SDK_DIR/build-tools"
 assert_case "missing build-tools reports actionable diagnostic" 2 "Android platform/build tools are incomplete" \

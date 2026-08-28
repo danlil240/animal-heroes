@@ -33,7 +33,7 @@ EXPECTED_PERMISSIONS="$(printf '%s\n' \
   android.permission.ACCESS_WIFI_STATE \
   android.permission.CHANGE_WIFI_MULTICAST_STATE \
   android.permission.INTERNET | sort)"
-ACTUAL_PERMISSIONS="$(sed -n "s/^uses-permission: name='\(android.permission.[^']*\)'.*/\1/p" <<<"$PERMISSIONS" | sort -u)"
+ACTUAL_PERMISSIONS="$(sed -n "s/^uses-permission[^:]*: name='\([^']*\)'.*/\1/p" <<<"$PERMISSIONS" | sort -u)"
 
 if [[ "$ACTUAL_PERMISSIONS" != "$EXPECTED_PERMISSIONS" ]]; then
   echo "FAIL: APK permissions must exactly match the allowed LAN set." >&2
