@@ -36,9 +36,33 @@ func _run() -> void:
 	if normal == null or normal.corner_radius_top_left < 24 or normal.border_width_left < 3:
 		_fail("game buttons must use large rounded corners and a visible border")
 		return
+	if not await _test_background_parallax():
+		return
 	quit(0)
+
+
+func _test_background_parallax() -> bool:
+	var background_scene: PackedScene = load("res://visual/sunny_forest_background.tscn")
+	if background_scene == null:
+		return _fail_bool("sunny forest background scene must load")
+	var background = background_scene.instantiate()
+	root.add_child(background)
+	await process_frame
+	for layer_name in ["Sky", "Far", "Mid", "Frame"]:
+		if background.get_node_or_null(layer_name) == null:
+			return _fail_bool("sunny forest background is missing %s" % layer_name)
+	background.set_focus_x(400.0)
+	if is_equal_approx(background.get_node("Far").position.x, background.get_node("Mid").position.x):
+		return _fail_bool("far and mid forest layers must use different parallax ratios")
+	background.queue_free()
+	return true
 
 
 func _fail(message: String) -> void:
 	push_error(message)
 	quit(1)
+
+
+func _fail_bool(message: String) -> bool:
+	_fail(message)
+	return false
