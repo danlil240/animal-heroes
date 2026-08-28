@@ -16,7 +16,11 @@ resolve_android_tools() {
 
   ADB_BIN="${ADB_BIN:-$sdk_root/platform-tools/adb}"
   if [[ -z "${AAPT_BIN:-}" ]]; then
-    AAPT_BIN="$(find "$sdk_root/build-tools" -mindepth 2 -maxdepth 2 -type f -name aapt -print 2>/dev/null | sort -V | tail -n 1)"
+    local build_tools_dir="$sdk_root/build-tools"
+    if [[ ! -d "$build_tools_dir" ]] || ! AAPT_BIN="$(find "$build_tools_dir" -mindepth 2 -maxdepth 2 -type f -name aapt -print 2>/dev/null | sort -V | tail -n 1)"; then
+      echo "Android platform/build tools are incomplete" >&2
+      return 2
+    fi
   fi
   [[ -x "$ADB_BIN" && -x "$AAPT_BIN" ]] || { echo "Android platform/build tools are incomplete" >&2; return 2; }
 

@@ -35,9 +35,10 @@ The export preset lives at `game/export_presets.cfg`.
 | Architecture | arm64-v8a |
 | Permissions | `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE` |
 
-No camera, microphone, contacts, phone, location, SMS, or storage permissions
-are requested. The permission audit script (`game/tests/device/apk_permissions.sh`)
-fails the build if any of those appear in the compiled APK.
+The APK requests exactly `INTERNET`, `ACCESS_NETWORK_STATE`,
+`ACCESS_WIFI_STATE`, and `CHANGE_WIFI_MULTICAST_STATE`. The permission audit
+script (`game/tests/device/apk_permissions.sh`) fails the build if the compiled
+APK's complete permission set differs from those four permissions.
 
 ## Building
 
@@ -90,8 +91,9 @@ sha256sum build/animal-heroes-release.apk | tee build/animal-heroes-release.apk.
 bash game/tests/device/apk_permissions.sh build/animal-heroes-debug.apk
 ```
 
-The audit resolves `aapt` through the shared helper and exits non-zero if the
-APK requests any sensitive permission.
+The audit resolves `aapt` through the shared helper and exits non-zero if
+`aapt` cannot inspect the APK or if its complete permission set differs from
+the four allowed LAN permissions.
 
 ## Installing on a Tablet
 
