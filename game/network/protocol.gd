@@ -54,6 +54,22 @@ static func valid_input(frame: Dictionary) -> bool:
 	return typeof(frame["jump"]) == TYPE_BOOL and typeof(frame["action"]) == TYPE_BOOL
 
 
+static func valid_snapshot(snapshot: Dictionary) -> bool:
+	if not snapshot.has_all(["tick", "players"]) or not _is_integral_number(snapshot["tick"]) or int(snapshot["tick"]) < 0:
+		return false
+	if not snapshot["players"] is Array or snapshot["players"].is_empty() or snapshot["players"].size() > GameConfig.MAX_PLAYERS:
+		return false
+	for player in snapshot["players"]:
+		if not player is Dictionary or not player.has_all(["peer_id", "x", "y", "vx", "vy", "hearts", "checkpoint", "last_seq"]):
+			return false
+		if not _is_integral_number(player["peer_id"]) or int(player["peer_id"]) <= 0 or not _is_integral_number(player["hearts"]) or int(player["hearts"]) < 0 or int(player["hearts"]) > 4 or not _is_integral_number(player["last_seq"]) or int(player["last_seq"]) < 0 or typeof(player["checkpoint"]) != TYPE_STRING or not _matches("^[A-Za-z0-9_-]{1,32}$", player["checkpoint"]):
+			return false
+		for coordinate in ["x", "y", "vx", "vy"]:
+			if not _is_number_in_range(player[coordinate], -100000.0, 100000.0):
+				return false
+	return true
+
+
 static func _has_required_discovery_types(discovery: Dictionary) -> bool:
 	if not discovery.has_all(["protocol", "content", "session_id", "state", "host", "port"]):
 		return false
@@ -71,3 +87,7 @@ static func _matches(pattern: String, value: String) -> bool:
 
 static func _is_integral_number(value: Variant) -> bool:
 	return (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) and is_equal_approx(float(value), roundf(float(value)))
+
+
+static func _is_number_in_range(value: Variant, minimum: float, maximum: float) -> bool:
+	return (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) and float(value) >= minimum and float(value) <= maximum
