@@ -5,22 +5,22 @@ exporting Animal Heroes to Android APK.
 
 ## Prerequisites
 
-The following toolchain is required to build the APK. Record the detected
-versions here once the toolchain is installed.
+The following toolchain is installed in the release-candidate environment.
 
 | Component | Required version | Detected version |
 | --- | --- | --- |
 | Godot Engine | 4.x stable (matching editor) | 4.7.2.stable.official |
-| Godot Android export templates | Matching Godot version | **NOT INSTALLED** |
-| Java JDK | 17+ | **NOT INSTALLED** |
-| Android SDK | API 34+ with build-tools | **NOT INSTALLED** |
-| Android Debug Bridge (adb) | Platform tools | **NOT INSTALLED** |
-| aapt | Android build-tools | **NOT INSTALLED** |
+| Godot Android export templates | Matching Godot version | 4.7.2.stable |
+| Java/Javac | 17+ | OpenJDK 17.0.20.1 |
+| Android platforms | API 34+ | 34 and 36 |
+| Android build-tools | API 34+ | 34.0.0 and 36.1.0 |
+| Android Debug Bridge (adb) | Platform tools | Installed; no connected, authorized device detected |
+| aapt/aapt2 | Android build-tools | Installed with 34.0.0 and 36.1.0 |
 
-> **Status:** The Android SDK, Java JDK, and Godot Android export templates are
-> not installed in the current environment. The build script and permission
-> audit are ready but cannot produce an APK until these prerequisites are met.
-> See the wizard section below for installation steps.
+> **Status:** The local build toolchain is ready. ADB installation is separate
+> from device availability: no connected, authorized tablet was detected during
+> this check. APK export, permission audit, and physical-device validation
+> remain release gates.
 
 ## Export Configuration
 
@@ -75,20 +75,8 @@ adb -s "$HOST_SERIAL" install -r build/animal-heroes-debug.apk
 adb -s "$CLIENT_SERIAL" install -r build/animal-heroes-debug.apk
 ```
 
-## Wizard: Installing the Android Toolchain
+## Device Availability
 
-Run the following wizard to install the missing prerequisites:
-
-```bash
-# Install Godot Android export templates
-# In the Godot editor: Editor > Manage Export Templates > Download and Install
-# Or manually copy templates to:
-#   ~/.local/share/godot/export_templates/<version>/
-
-# Install Java JDK
-sudo apt install openjdk-17-jdk
-
-# Install Android SDK command-line tools
-# Download from https://developer.android.com/studio#command-line-tools-only
-# Set ANDROID_HOME and install platform-tools, build-tools, and platforms
-```
+Before the tablet checks, connect both SM-T220 devices by USB and authorize
+ADB on each. Confirm availability with `adb devices -l`; this is a physical
+test setup requirement, not an Android SDK installation check.

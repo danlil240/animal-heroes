@@ -18,24 +18,29 @@ No copyrighted assets, traced images, or third-party sprites were used.
 | `game/art/environment/crystal_caves/` | Cave background, crystal formations, stalactites, platforms |
 | `game/art/environment/cloud_factory/` | Factory background, gears, metal platforms |
 | `game/art/objects/` | Switches, doors, boulders, fans, conveyors, enemies, powerups, exits, walls |
-| `game/art/ui/` | Jump wing and action bubble icons |
+| `game/art/ui/` | Jump wing, action bubble, and application icon |
 
 ## Audio Assets
 
-All audio files under `game/assets/audio/` are placeholder silence files
-(stub assets) created for this project. They must be replaced with original
-compositions before release.
+The six PCM WAV files were played once in the release-candidate environment
+and inspected as 16-bit mono, 22050 Hz files with non-zero sample data. Their
+roles are determined by the `AudioDirector` routes below.
 
-| File | Status |
-| --- | --- |
-| `sunny_forest.wav` | Stub (silence) — replace with original music |
-| `crystal_caves.wav` | Stub (silence) — replace with original music |
-| `cloud_factory.wav` | Stub (silence) — replace with original music |
-| `competition.wav` | Stub (silence) — replace with original music |
-| `sfx_ui.wav` | Stub (silence) — replace with original UI sound |
-| `sfx_gameplay.wav` | Stub (silence) — replace with original gameplay sound |
+| File | In-game role | Repository provenance | Release status |
+| --- | --- | --- | --- |
+| `sunny_forest.wav` | Sunny Forest, test arena, and menu music | Updated in commit `5f70f72` by `Codex`; the creator and rights source are not recorded | BLOCKED pending rights provenance |
+| `crystal_caves.wav` | Crystal Caves music | Updated in commit `5f70f72` by `Codex`; the creator and rights source are not recorded | BLOCKED pending rights provenance |
+| `cloud_factory.wav` | Cloud Factory and robot boss music | Updated in commit `5f70f72` by `Codex`; the creator and rights source are not recorded | BLOCKED pending rights provenance |
+| `competition.wav` | Star Race, Treasure Dash, and Bubble Bounce music | Updated in commit `5f70f72` by `Codex`; the creator and rights source are not recorded | BLOCKED pending rights provenance |
+| `sfx_ui.wav` | UI interaction sound | Updated in commit `5f70f72` by `Codex`; the creator and rights source are not recorded | BLOCKED pending rights provenance |
+| `sfx_gameplay.wav` | Gameplay event sound | Updated in commit `5f70f72` by `Codex`; the creator and rights source are not recorded | BLOCKED pending rights provenance |
+
+The commit author is repository provenance, not proof of authorship or a
+license grant. Do not mark these WAVs releasable until their creator and
+distribution rights are documented.
 
 ## License
 
-All original assets are licensed under the project license. No third-party
-or CC0 assets are used.
+The SVG artwork is original project artwork and is licensed under the project
+license. Audio licensing remains unresolved as described above; no claim about
+third-party or CC0 audio can be made from the repository history alone.
