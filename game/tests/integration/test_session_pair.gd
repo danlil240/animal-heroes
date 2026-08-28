@@ -5,6 +5,8 @@ extends SceneTree
 
 const SHARED_LEVEL := "crystal_caves"
 
+var acknowledged_level := ""
+
 
 func _init() -> void:
 	call_deferred("_run")
@@ -38,7 +40,15 @@ func _run() -> void:
 		_fail("third client was accepted")
 		return
 	if role == "host":
+		session.level_start_acknowledged.connect(_capture_level_ack)
 		session.start_level(SHARED_LEVEL)
+		var waited := 0.0
+		while waited < 3.0 and acknowledged_level != SHARED_LEVEL:
+			await create_timer(0.05).timeout
+			waited += 0.05
+		if acknowledged_level != SHARED_LEVEL:
+			_fail("host did not receive the client's level acknowledgement")
+			return
 	elif role == "client":
 		var waited := 0.0
 		while waited < 3.0 and session.current_level_id.is_empty():
@@ -47,7 +57,10 @@ func _run() -> void:
 		if session.current_level_id != SHARED_LEVEL:
 			_fail("client did not receive the host's level, got '%s'" % session.current_level_id)
 			return
-	print("SESSION_RESULT role=%s state=%s character=%s level=%s" % [role, session.state, session.selected_character, session.current_level_id])
+	if role == "third":
+		print("SESSION_RESULT role=third accepted=false")
+	else:
+		print("SESSION_RESULT role=%s state=%s character=%s level=%s" % [role, session.state, session.selected_character, session.current_level_id])
 	if role == "client":
 		await create_timer(2.0).timeout
 	session.leave_game()
@@ -59,6 +72,10 @@ func _argument_value(name: String) -> String:
 		if argument.begins_with("--%s=" % name):
 			return argument.trim_prefix("--%s=" % name)
 	return ""
+
+
+func _capture_level_ack(_peer_id: int, level_id: String) -> void:
+	acknowledged_level = level_id
 
 
 func _fail(message: String) -> void:

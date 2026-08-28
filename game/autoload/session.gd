@@ -10,6 +10,7 @@ signal snapshot_received(snapshot: Dictionary)
 signal reconnect_state_changed(next_state: String)
 signal checkpoint_confirmed(checkpoint: Dictionary)
 signal level_start_received(level_id: String)
+signal level_start_acknowledged(peer_id: int, level_id: String)
 
 const GameConfig = preload("res://core/game_config.gd")
 const SessionState = preload("res://network/session_state.gd")
@@ -121,6 +122,15 @@ func deliver_level_start(level_id: String) -> void:
 		return
 	current_level_id = level_id
 	level_start_received.emit(level_id)
+	if not _is_host and _peer != null:
+		acknowledge_level_start.rpc_id(1, level_id)
+
+
+@rpc("any_peer", "reliable")
+func acknowledge_level_start(level_id: String) -> void:
+	if not _is_host or level_id != current_level_id:
+		return
+	level_start_acknowledged.emit(multiplayer.get_remote_sender_id(), level_id)
 
 
 func join_game(host: String, port: int = GameConfig.GAME_PORT, character_id: String = "fox") -> Error:
