@@ -101,8 +101,9 @@ func _test_start_mode_selects_requested_mode_and_level() -> bool:
 func _test_autoloads_are_registered() -> bool:
 	var save_store_path: Variant = ProjectSettings.get_setting("autoload/SaveStore", "")
 	var app_state_path: Variant = ProjectSettings.get_setting("autoload/AppState", "")
-	if save_store_path != "*res://autoload/save_store.gd" or app_state_path != "*res://autoload/app_state.gd":
-		push_error("SaveStore and AppState autoloads are not registered")
+	var session_path: Variant = ProjectSettings.get_setting("autoload/Session", "")
+	if save_store_path != "*res://autoload/save_store.gd" or app_state_path != "*res://autoload/app_state.gd" or session_path != "*res://autoload/session.gd":
+		push_error("SaveStore, AppState, and Session autoloads are not registered")
 		return false
 	return true
 

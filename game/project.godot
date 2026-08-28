@@ -16,6 +16,7 @@ run/main_scene="res://levels/test_arena.tscn"
 
 SaveStore="*res://autoload/save_store.gd"
 AppState="*res://autoload/app_state.gd"
+Session="*res://autoload/session.gd"
 
 [display]
 
