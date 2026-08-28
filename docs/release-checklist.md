@@ -25,11 +25,11 @@ supervised usability result.
 
 | Artifact | Status |
 | --- | --- |
-| `build/animal-heroes-debug.apk` | PENDING (export not yet run) |
-| `build/animal-heroes-debug.apk.sha256` | PENDING |
+| `build/animal-heroes-debug.apk` | PASS — 2026-08-29; Godot 4.7.2.stable.official; 29,714,438 bytes; SHA-256 `7f576ba009e526058976e1f3b9ea82500377b454f67cb705bd5c5ad5ee190ca2` |
+| `build/animal-heroes-debug.apk.sha256` | PASS — verified with `sha256sum --check` on 2026-08-29 |
 | `build/animal-heroes-release.apk` | PENDING (no keystore) |
 | `build/animal-heroes-release.apk.sha256` | PENDING |
-| Permission audit (no sensitive permissions) | PENDING (no APK) |
+| Permission audit (no sensitive permissions) | PASS — only `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`, and `INTERNET` |
 
 ## Automated Test Suite
 

@@ -4,19 +4,18 @@
 # Usage: bash game/tests/device/apk_permissions.sh <path-to-apk>
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+source "$ROOT_DIR/scripts/android_tools.sh"
+resolve_android_tools
+
 APK="${1:-}"
 if [[ -z "$APK" || ! -f "$APK" ]]; then
   echo "Usage: $0 <path-to-apk>" >&2
   exit 2
 fi
 
-if ! command -v aapt >/dev/null 2>&1; then
-  echo "aapt not found. Install Android SDK build-tools." >&2
-  echo "See docs/android-build.md for prerequisites." >&2
-  exit 2
-fi
-
-PERMISSIONS="$(aapt dump permissions "$APK" 2>/dev/null || true)"
+PERMISSIONS="$("$AAPT_BIN" dump permissions "$APK" 2>/dev/null || true)"
 
 if grep -Eq \
   'CAMERA|RECORD_AUDIO|READ_CONTACTS|WRITE_CONTACTS|READ_PHONE|ACCESS_FINE_LOCATION|ACCESS_COARSE_LOCATION|READ_SMS|WRITE_EXTERNAL_STORAGE|MANAGE_EXTERNAL_STORAGE|READ_EXTERNAL_STORAGE' \

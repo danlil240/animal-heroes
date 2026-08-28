@@ -11,10 +11,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build"
 
+source "$SCRIPT_DIR/android_tools.sh"
+resolve_android_tools
+
 mkdir -p "$BUILD_DIR"
 
 echo "Building debug APK..."
 "$GODOT_BIN" --headless --path "$ROOT_DIR/game" --export-debug Android "$BUILD_DIR/animal-heroes-debug.apk"
+
+echo "Auditing APK permissions..."
+bash "$ROOT_DIR/game/tests/device/apk_permissions.sh" "$BUILD_DIR/animal-heroes-debug.apk"
 
 echo "Computing SHA-256..."
 sha256sum "$BUILD_DIR/animal-heroes-debug.apk" > "$BUILD_DIR/animal-heroes-debug.apk.sha256"
