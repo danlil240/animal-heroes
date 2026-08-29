@@ -27,7 +27,7 @@ PER_TEST_TIMEOUT = 120  # seconds
 
 # Real error tokens (case-sensitive). Godot shutdown noise is filtered separately.
 _ERROR_TOKENS = re.compile(r"SCRIPT ERROR|USER SCRIPT ERROR|push_error|ERROR:")
-_SHUTDOWN_NOISE = re.compile(r"at exit|leaked at exit|resources still in use")
+_SHUTDOWN_NOISE = re.compile(r"at exit|leaked at exit|resources still in use|Texture with.*leaked.*bytes")
 
 
 def discover_tests() -> list[tuple[str, Path]]:
