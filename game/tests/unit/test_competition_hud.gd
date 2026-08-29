@@ -8,7 +8,28 @@ func _init() -> void:
 func _run() -> void:
 	if not await _test_bubble_bounce_hud():
 		return
+	if not await _test_star_race_hud():
+		return
 	quit(0)
+
+
+func _test_star_race_hud() -> bool:
+	var scene: PackedScene = load("res://ui/star_race_hud.tscn")
+	if scene == null:
+		return _fail_bool("star race HUD scene must load")
+	var hud = scene.instantiate()
+	root.add_child(hud)
+	await process_frame
+	hud.render(2, 4, false, true)
+	if hud.get_node("HostProgress").text != "2/4":
+		return _fail_bool("star race HUD host progress must read N/4, got %s" % hud.get_node("HostProgress").text)
+	if hud.get_node("GuestProgress").text != "4/4 ✓":
+		return _fail_bool("star race HUD must append checkmark when finished, got %s" % hud.get_node("GuestProgress").text)
+	hud.render(4, 4, true, true)
+	if hud.get_node("HostProgress").text != "4/4 ✓":
+		return _fail_bool("star race HUD host must show checkmark when finished, got %s" % hud.get_node("HostProgress").text)
+	hud.queue_free()
+	return true
 
 
 func _test_bubble_bounce_hud() -> bool:
