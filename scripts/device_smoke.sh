@@ -15,6 +15,8 @@ BUILD_DIR="$ROOT_DIR/build"
 APK="$BUILD_DIR/animal-heroes-debug.apk"
 APK_CHECKSUM_FILE="$APK.sha256"
 RESULTS_DIR="${SMOKE_RESULTS_DIR:-$ROOT_DIR/docs/test-results}"
+RELEASE_RESULTS_DIR="$(realpath -m -- "$ROOT_DIR/docs/test-results")"
+RESULTS_DIR="$(realpath -m -- "$RESULTS_DIR")"
 DEFAULT_SMOKE_DURATION_SECONDS=600
 SMOKE_DURATION_SECONDS="${SMOKE_DURATION_SECONDS:-$DEFAULT_SMOKE_DURATION_SECONDS}"
 
@@ -55,7 +57,7 @@ if [[ "$SMOKE_DURATION_SECONDS" != "$DEFAULT_SMOKE_DURATION_SECONDS" ]]; then
     echo "Non-default SMOKE_DURATION_SECONDS requires SMOKE_TEST_MODE=1 and is test-only." >&2
     exit 2
   fi
-  if [[ -z "${SMOKE_RESULTS_DIR:-}" || "$RESULTS_DIR" == "$ROOT_DIR/docs/test-results" ]]; then
+  if [[ -z "${SMOKE_RESULTS_DIR:-}" || "$RESULTS_DIR" == "$RELEASE_RESULTS_DIR" || "$RESULTS_DIR" == "$RELEASE_RESULTS_DIR"/* ]]; then
     echo "Test-only SMOKE_DURATION_SECONDS requires SMOKE_RESULTS_DIR outside release evidence." >&2
     exit 2
   fi

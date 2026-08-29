@@ -10,6 +10,7 @@ SDK_DIR="$TEMP_DIR/sdk"
 RESULTS_DIR="$TEMP_DIR/results"
 RELEASE_RESULTS_DIR="$ROOT_DIR/docs/test-results"
 RELEASE_RESULTS_SNAPSHOT="$TEMP_DIR/release-results.snapshot"
+RELEASE_RESULTS_LINK="$TEMP_DIR/release-results-link"
 ADB_LOG="$TEMP_DIR/adb.log"
 EVENT_LOG="$TEMP_DIR/events.log"
 REAL_SHA256SUM="$(command -v sha256sum)"
@@ -20,7 +21,8 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$SDK_DIR/platform-tools" "$SDK_DIR/build-tools/1.0.0" "$TEMP_DIR/bin"
-find "$RELEASE_RESULTS_DIR" -maxdepth 1 -type f -print | sort > "$RELEASE_RESULTS_SNAPSHOT"
+find "$RELEASE_RESULTS_DIR" -maxdepth 1 -type f -exec "$REAL_SHA256SUM" {} + 2>/dev/null | sort > "$RELEASE_RESULTS_SNAPSHOT"
+ln -s "$RELEASE_RESULTS_DIR" "$RELEASE_RESULTS_LINK"
 
 cat > "$SDK_DIR/platform-tools/adb" <<'EOF'
 #!/usr/bin/env bash
@@ -212,6 +214,48 @@ fi
 echo "PASS: test duration override cannot write release evidence"
 
 set +e
+dot_results_output="$(env \
+  ANDROID_SDK_ROOT="$SDK_DIR" \
+  FAKE_ADB_LOG="$ADB_LOG" \
+  FAKE_EVENT_LOG="$EVENT_LOG" \
+  REAL_SHA256SUM="$REAL_SHA256SUM" \
+  PATH="$TEMP_DIR/bin:$PATH" \
+  HOST_SERIAL=host-serial \
+  CLIENT_SERIAL=client-serial \
+  SMOKE_DURATION_SECONDS=0 \
+  SMOKE_TEST_MODE=1 \
+  SMOKE_RESULTS_DIR="$ROOT_DIR/docs/test-results/." \
+  bash "$SMOKE_SCRIPT" 2>&1)"
+dot_results_status=$?
+set -e
+if [[ "$dot_results_status" -eq 0 ]]; then
+  echo "FAIL: dot release-results alias was accepted" >&2
+  exit 1
+fi
+echo "PASS: dot release-results alias is rejected"
+
+set +e
+symlink_results_output="$(env \
+  ANDROID_SDK_ROOT="$SDK_DIR" \
+  FAKE_ADB_LOG="$ADB_LOG" \
+  FAKE_EVENT_LOG="$EVENT_LOG" \
+  REAL_SHA256SUM="$REAL_SHA256SUM" \
+  PATH="$TEMP_DIR/bin:$PATH" \
+  HOST_SERIAL=host-serial \
+  CLIENT_SERIAL=client-serial \
+  SMOKE_DURATION_SECONDS=0 \
+  SMOKE_TEST_MODE=1 \
+  SMOKE_RESULTS_DIR="$RELEASE_RESULTS_LINK" \
+  bash "$SMOKE_SCRIPT" 2>&1)"
+symlink_results_status=$?
+set -e
+if [[ "$symlink_results_status" -eq 0 ]]; then
+  echo "FAIL: symlink release-results alias was accepted" >&2
+  exit 1
+fi
+echo "PASS: symlink release-results alias is rejected"
+
+set +e
 wrong_model_output="$(run_smoke FAKE_CLIENT_MODEL=Not-SM-T220 2>&1)"
 wrong_model_status=$?
 set -e
@@ -288,10 +332,10 @@ if [[ "$(<"$RESULTS_DIR/run-duration-seconds.txt")" != "0" ]]; then
   echo "FAIL: results did not record the actual test duration" >&2
   exit 1
 fi
-if ! cmp -s "$RELEASE_RESULTS_SNAPSHOT" <(find "$RELEASE_RESULTS_DIR" -maxdepth 1 -type f -print | sort); then
+if ! cmp -s "$RELEASE_RESULTS_SNAPSHOT" <(find "$RELEASE_RESULTS_DIR" -maxdepth 1 -type f -exec "$REAL_SHA256SUM" {} + 2>/dev/null | sort); then
   echo "FAIL: fake-device test populated repository release results" >&2
-  diff -u "$RELEASE_RESULTS_SNAPSHOT" <(find "$RELEASE_RESULTS_DIR" -maxdepth 1 -type f -print | sort) >&2 || true
+  diff -u "$RELEASE_RESULTS_SNAPSHOT" <(find "$RELEASE_RESULTS_DIR" -maxdepth 1 -type f -exec "$REAL_SHA256SUM" {} + 2>/dev/null | sort) >&2 || true
   exit 1
 fi
 
-echo "PASS: checksum, ordered before/after captures, launches, actual duration, and results isolation are recorded"
+echo "PASS: checksum, ordered before/after captures, launches, actual duration, alias rejection, and results isolation are recorded"
