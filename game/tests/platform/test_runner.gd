@@ -6,7 +6,6 @@ const PlayerInputScript := preload("res://player/player_input.gd")
 
 const VIEWPORT_W := 1340
 const VIEWPORT_H := 800
-const PHYSICS_HZ := 30
 const SOFTLOCK_WINDOW := 180
 const OUT_OF_WORLD_Y := 2000.0
 
@@ -17,6 +16,7 @@ var _viewport: SubViewport = null
 var _level: Node2D = null
 var _rabbit: CharacterBody2D = null
 var _fox: CharacterBody2D = null
+var _injector: _InputInjector = null
 var _out_dir: String = ""
 var _result: Dictionary = {}
 var _rabbit_history: Array[Vector2] = []
@@ -93,40 +93,48 @@ func _setup_viewport() -> void:
 	get_root().add_child(_viewport)
 	_rabbit = _level.get_node_or_null("Rabbit")
 	_fox = _level.get_node_or_null("Fox")
+	if _rabbit != null and _fox != null:
+		_injector = _InputInjector.new()
+		_injector.timeline = _timeline
+		_injector.rabbit = _rabbit
+		_injector.fox = _fox
+		_level.add_child(_injector)
+		_level.move_child(_injector, 0)
 
 
 func _disable_auto_processing() -> void:
 	if _level != null:
-		_level.set_physics_process(false)
-		_level.set_process(false)
 		for child in _level.get_children():
-			_disable_subtree_processing(child)
-	if _rabbit != null:
-		_rabbit.set_physics_process(false)
-	if _fox != null:
-		_fox.set_physics_process(false)
+			_freeze_subtree_visuals(child)
 
 
-func _disable_subtree_processing(node: Node) -> void:
-	if node is Node:
-		(node as Node).set_process(false)
-		(node as Node).set_physics_process(false)
+# Freeze _process (real-time visual animations) on every node in the subtree,
+# and freeze _physics_process on nodes that are NOT the heroes or the level's
+# own physics (we want the engine to drive level._physics_process and the
+# heroes' physics_step). Enemies/bubbles/areas have no meaningful
+# _physics_process, so disabling theirs is harmless; their motion comes from
+# host_step called in _step_level.
+func _freeze_subtree_visuals(node: Node) -> void:
+	node.set_process(false)
+	# Keep heroes' _physics_process enabled (engine drives move_and_slide).
+	# Keep the level's _physics_process enabled (drives _step_level + route_control).
+	# Disable _physics_process on everything else (enemies, bubbles, areas, visuals).
+	if node != _rabbit and node != _fox and node != _injector:
+		node.set_physics_process(false)
 	for child in node.get_children():
-		_disable_subtree_processing(child)
+		_freeze_subtree_visuals(child)
 
 
 func _run_loop() -> void:
-	var delta := 1.0 / float(PHYSICS_HZ)
 	var total := _timeline.total_frames()
+	var saved_hz := Engine.get_physics_ticks_per_second()
 	Engine.set_max_physics_steps_per_frame(1)
 	for frame in range(total + 1):
-		var in1 := _timeline.frame_for(1, frame)
-		var in2 := _timeline.frame_for(2, frame)
-		_rabbit.apply_input(in1)
-		_fox.apply_input(in2)
-		_rabbit.physics_step(delta)
-		_fox.physics_step(delta)
-		_level._step_level(delta)
+		_injector.current_frame = frame
+		Engine.set_physics_ticks_per_second(saved_hz)
+		await physics_frame
+		Engine.set_physics_ticks_per_second(1)
+		await process_frame
 		_record_history()
 		_run_bug_detection(frame)
 		_run_frame_assertions(frame)
@@ -134,8 +142,7 @@ func _run_loop() -> void:
 		_record_state_snapshot(frame)
 		if _result.status == "fail" and _result.failure_reason != "none":
 			break
-		await physics_frame
-		await process_frame
+	Engine.set_physics_ticks_per_second(saved_hz)
 	Engine.set_max_physics_steps_per_frame(8)
 
 
@@ -321,3 +328,16 @@ func _finish(status: String, reason: String) -> void:
 		f.close()
 	print("VISUAL_TEST_RESULT name=%s status=%s" % [_test_name, _result.status])
 	quit(1 if _result.status == "fail" else 0)
+
+
+class _InputInjector extends Node:
+	var timeline: InputTimeline
+	var rabbit: CharacterBody2D
+	var fox: CharacterBody2D
+	var current_frame: int = 0
+
+	func _physics_process(_delta: float) -> void:
+		if timeline == null or rabbit == null or fox == null:
+			return
+		rabbit.apply_input(timeline.frame_for(1, current_frame))
+		fox.apply_input(timeline.frame_for(2, current_frame))
