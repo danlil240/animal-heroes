@@ -46,6 +46,7 @@ var _finished: bool = false
 var _net_sync_accumulator: float = 0.0
 var _remote_input_frame = null
 var _has_remote_input: bool = false
+var _had_live_world_peer: bool = false
 var _last_world_request_by_peer: Dictionary = {}
 var _next_local_world_request_sequence: int = 0
 var _next_world_event_sequence: int = 0
@@ -65,9 +66,11 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_clear_disconnected_remote_input()
 	for spring in get_tree().get_nodes_in_group("spring_pad"):
 		if spring.has_method("host_step"):
 			spring.host_step(delta)
+	_step_shared_level_rules(delta)
 	_step_level(delta)
 	route_control_frames()
 	apply_remote_desktop_frame(_desktop_remote_frame())
@@ -185,10 +188,19 @@ func process_world_action(peer_id: int, request_sequence: int, action_id: String
 	var payload: Variant = event.get("payload", null)
 	if kind.is_empty() or not payload is Dictionary:
 		return false
+	return publish_world_event(kind, payload)
+
+
+## Applies and replicates one authority-approved mutation while keeping request
+## replay validation in process_world_action(). Host-owned held input uses this
+## same publication boundary rather than creating a parallel event path.
+func publish_world_event(kind: String, payload: Dictionary) -> bool:
+	if not _is_world_authority() or kind.is_empty():
+		return false
 	_next_world_event_sequence += 1
 	if not apply_world_event(_next_world_event_sequence, kind, payload):
 		return false
-	if _has_live_world_peer() and _is_world_authority():
+	if _has_live_world_peer():
 		_receive_world_event.rpc(_next_world_event_sequence, kind, payload)
 	return true
 
@@ -219,7 +231,7 @@ func _receive_world_event(event_sequence: int, kind: String, payload: Dictionary
 
 func _is_world_authority() -> bool:
 	var session = get_node_or_null("/root/Session")
-	return session == null or session.state != Session.PLAYING or session.is_host()
+	return session == null or session.state == Session.IDLE or (session.state == Session.PLAYING and session.is_host())
 
 
 func _has_live_world_peer() -> bool:
@@ -234,6 +246,10 @@ func _setup_level() -> void:
 
 
 func _step_level(_delta: float) -> void:
+	pass
+
+
+func _step_shared_level_rules(_delta: float) -> void:
 	pass
 
 
@@ -301,6 +317,27 @@ func _on_spring_launched(peer_id: int) -> void:
 func _respawn_fallen_hero(body: Node2D) -> void:
 	if body.has_method("respawn"):
 		body.respawn(body.checkpoint_position)
+		_reset_world_input_state(int(body.get("peer_id")))
+
+
+func _clear_disconnected_remote_input() -> void:
+	if _has_live_world_peer():
+		_had_live_world_peer = true
+		return
+	if not _had_live_world_peer and not _has_remote_input:
+		return
+	if _has_remote_input:
+		var remote = _remote_hero()
+		if remote.has_method("apply_network_state"):
+			remote.apply_network_state(remote.global_position, Vector2.ZERO, 0.0, false, false)
+		remote.is_network_remote = false
+		_has_remote_input = false
+	_had_live_world_peer = false
+	_reset_world_input_state(0)
+
+
+func _reset_world_input_state(_peer_id: int) -> void:
+	pass
 
 
 ## The level's parallax backdrop, whatever world it belongs to.

@@ -7,6 +7,7 @@ extends TwoPlayerLevel
 
 const CoopModeScript := preload("res://modes/coop_mode.gd")
 const TeamScoreScript := preload("res://core/team_score.gd")
+const TeamComboScript := preload("res://core/team_combo.gd")
 const BubbleInventoryScript := preload("res://player/bubble_inventory.gd")
 
 ## Campaign identifier for this level; set on the scene root.
@@ -14,6 +15,7 @@ const BubbleInventoryScript := preload("res://player/bubble_inventory.gd")
 
 var coop_mode: RefCounted = null
 var team_score: RefCounted = null
+var team_combo: RefCounted = null
 var bubble_ammo: RefCounted = null
 var _collected_stars: int = 0
 
@@ -23,6 +25,7 @@ func _setup_level() -> void:
 		push_error("cooperative level must declare level_id")
 	coop_mode = CoopModeScript.new()
 	team_score = TeamScoreScript.new()
+	team_combo = TeamComboScript.new()
 	bubble_ammo = BubbleInventoryScript.new()
 	rabbit.peer_id = 1
 	fox.peer_id = 2
@@ -41,6 +44,10 @@ func _setup_level() -> void:
 
 func _setup_coop_level() -> void:
 	pass
+
+
+func _step_shared_level_rules(delta: float) -> void:
+	team_combo.step(delta)
 
 
 ## Campaign levels up to and including `id`, in campaign order.
@@ -77,7 +84,7 @@ func _on_collectible_entered(body: Node2D, collectible: Area2D) -> void:
 
 
 func collect_star(star_id: String, collectible: Node = null) -> bool:
-	var points: int = team_score.award("star:%s" % star_id, "star")
+	var points: int = _award_combo_score("star:%s" % star_id, "star")
 	if points <= 0:
 		return false
 	_collected_stars += 1
@@ -87,6 +94,21 @@ func collect_star(star_id: String, collectible: Node = null) -> bool:
 	_show_score_gain(points, collectible.global_position if collectible is Node2D else Vector2.ZERO)
 	_render_gameplay_hud()
 	return true
+
+
+func _award_combo_score(event_id: String, category: String) -> int:
+	var multiplier: int = team_combo.preview_multiplier()
+	var points: int = team_score.award(event_id, category, multiplier)
+	if points > 0:
+		team_combo.commit_scored_event()
+	return points
+
+
+func _award_teamwork_score(event_id: String) -> int:
+	var points: int = team_score.award(event_id, "teamwork", 1)
+	if points > 0:
+		team_combo.refresh()
+	return points
 
 
 func _render_gameplay_hud() -> void:

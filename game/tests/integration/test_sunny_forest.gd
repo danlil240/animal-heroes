@@ -110,8 +110,11 @@ func _test_authoritative_star_and_enemy_score(level: Node) -> bool:
 	if not level.register_enemy_defeat("beetle-meadow-1", 1):
 		_fail("first enemy defeat must be recorded")
 		return false
-	if level.register_enemy_defeat("beetle-meadow-1", 2) or level.team_score.total != 35:
+	if level.register_enemy_defeat("beetle-meadow-1", 2) or level.team_score.total != 60:
 		_fail("duplicate enemy defeat must not score twice")
+		return false
+	if level.team_combo.multiplier != 2:
+		_fail("only the nonduplicate star and enemy scores must advance the combo")
 		return false
 	return true
 
@@ -146,14 +149,17 @@ func _test_role_gated_fallen_log(level: Node) -> bool:
 	if not level.process_world_action(1, 4, "switch", "overhead-switch", switch_target.global_position):
 		_fail("Riki must be able to activate the overhead switch")
 		return false
-	if not level.gate_is_open("fallen-log") or level.team_score.total != 135:
+	if not level.gate_is_open("fallen-log") or level.team_score.total != 160:
 		_fail("two role actions must open the log gate and add 100 team points")
+		return false
+	if level.team_combo.multiplier != 2 or not is_equal_approx(level.team_combo.remaining, 2.5):
+		_fail("teamwork must stay at 1x and only refresh the active combo window")
 		return false
 	return true
 
 
-## Catches bubble pickup not granting ten, firing not consuming one, or the
-## active projectile budget growing beyond six.
+## Catches bubble pickup not granting ten, spread firing publishing a partial
+## fan, or the active projectile budget growing beyond six.
 func _test_bubble_inventory_and_pool(level: Node) -> bool:
 	if level.grant_bubbles(1) != 10:
 		_fail("bubble flower must grant ten spread shots")
@@ -165,18 +171,20 @@ func _test_bubble_inventory_and_pool(level: Node) -> bool:
 	action_frame.action = true
 	rabbit.apply_input(action_frame)
 	level._step_level(0.0)
-	if level.active_bubble_count() != 1:
-		_fail("context action with no nearby object must fire a bubble")
+	if level.active_bubble_count() != 3:
+		_fail("context action with spread charges must fire a three-member fan")
 		return false
-	if level.bubble_ammo.remaining(1) != 9 or level.active_bubble_count() != 1:
-		_fail("bubble fire must consume one shot and activate one projectile")
+	if level.bubble_ammo.remaining(1) != 9:
+		_fail("one accepted spread sequence must consume exactly one charge")
 		return false
-	for shot in 5:
-		if not level.fire_bubble(1, Vector2(1800, 620), 1.0):
-			_fail("remaining spread shot %d must fire" % shot)
-			return false
-	if level.bubble_ammo.remaining(1) != 4 or level.active_bubble_count() != 6:
-		_fail("ten granted shots must leave four charges after six bounded projectiles")
+	if not level.fire_bubble(1, Vector2(1800, 620), 1.0):
+		_fail("a second complete spread fan must fit the remaining pool")
+		return false
+	if level.fire_bubble(1, Vector2(1800, 620), 1.0):
+		_fail("spread fire must reject pool exhaustion atomically")
+		return false
+	if level.bubble_ammo.remaining(1) != 8 or level.active_bubble_count() != 6:
+		_fail("two spread sequences must spend two charges and fill six projectile slots")
 		return false
 	return true
 
@@ -192,11 +200,11 @@ func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
 	if not level.activate_teamwork_part("bubble-grove", "right-flower", 2):
 		_fail("both pressure flowers must open Bubble Grove")
 		return false
-	if not level.gate_is_open("bubble-grove") or level.team_score.total != 235:
+	if not level.gate_is_open("bubble-grove") or level.team_score.total != 260:
 		_fail("pressure gate must award one 100-point teamwork bonus")
 		return false
 	var world_snapshot: Dictionary = level.world_state_snapshot()
-	for required_key in ["score", "collected_ids", "checkpoint_id", "heroes", "enemies", "gates", "ammo", "projectiles", "event_sequence"]:
+	for required_key in ["score", "collected_ids", "combo", "checkpoint_id", "heroes", "enemies", "gates", "ammo", "projectiles", "event_sequence"]:
 		if not world_snapshot.has(required_key):
 			_fail("Sunny Forest reconnect snapshot is missing %s" % required_key)
 			return false
@@ -213,7 +221,7 @@ func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
 	if not level.restore_world_state(world_snapshot):
 		_fail("valid Sunny Forest world snapshot must restore")
 		return false
-	if level.team_score.total != 235 or level.bubble_ammo.remaining(1) != 4 or level.active_bubble_count() != 6:
+	if level.team_score.total != 260 or level.team_combo.multiplier != 2 or level.bubble_ammo.remaining(1) != 8 or level.active_bubble_count() != 6:
 		_fail("snapshot restore must replace score, ammo, and active projectiles")
 		return false
 	var results: Array[Dictionary] = []
@@ -228,7 +236,7 @@ func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
 	if not level.enter_finish(1) or not level.is_finished():
 		_fail("both heroes at the magical tree must finish the level")
 		return false
-	if results.size() != 1 or int(results[0].get("team_score", -1)) != 235:
+	if results.size() != 1 or int(results[0].get("team_score", -1)) != 260:
 		_fail("finish payload must contain the authoritative team score")
 		return false
 	if String(results[0].get("next_level_id", "")) != "crystal_caves":
