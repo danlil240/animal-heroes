@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 GODOT_BIN="${GODOT_BIN:-godot}"
+python3 scripts/sync_release_metadata.py --check
 "$GODOT_BIN" --headless --editor --path game --quit
 while IFS= read -r test_file; do
   "$GODOT_BIN" --headless --path game -s "res://${test_file#game/}"

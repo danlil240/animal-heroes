@@ -1,7 +1,8 @@
 extends Node
 
+const BuildInfo = preload("res://core/build_info.gd")
 const DEFAULT_PATH := "user://animal-heroes-save.json"
-const CURRENT_VERSION := 1
+const CURRENT_VERSION := BuildInfo.SAVE_SCHEMA_VERSION
 const DEFAULT_DATA := {
 	"version": CURRENT_VERSION,
 	"unlocked_levels": ["sunny_forest"],

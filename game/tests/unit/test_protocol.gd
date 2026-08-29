@@ -18,7 +18,7 @@ func _init() -> void:
 func _test_discovery_round_trip(protocol) -> bool:
 	var packet: PackedByteArray = protocol.encode_discovery("abc123", "lobby", "192.168.1.8", 28740)
 	var decoded: Dictionary = protocol.decode_discovery(packet)
-	if decoded.get("protocol") != 1 or decoded.get("content") != "1.0.0" or decoded.get("session_id") != "abc123":
+	if decoded.get("protocol") != 1 or decoded.get("content") != "1.0.0-dev.1" or decoded.get("session_id") != "abc123":
 		return _fail("compatible discovery packet must round trip")
 	if decoded.get("host") != "192.168.1.8" or decoded.get("port") != 28740 or decoded.get("state") != "lobby":
 		return _fail("discovery packet must retain its endpoint and state")
