@@ -3,8 +3,8 @@
 set -euo pipefail
 
 resolve_android_tools() {
-  if [[ -x "${ADB_BIN:-}" && -x "${AAPT_BIN:-}" ]]; then
-    export ADB_BIN AAPT_BIN
+  if [[ -x "${ADB_BIN:-}" && -x "${AAPT_BIN:-}" && -x "${APKSIGNER_BIN:-}" ]]; then
+    export ADB_BIN AAPT_BIN APKSIGNER_BIN
     return 0
   fi
 
@@ -15,14 +15,18 @@ resolve_android_tools() {
   [[ -d "$sdk_root" ]] || { echo "Android SDK not found" >&2; return 2; }
 
   ADB_BIN="${ADB_BIN:-$sdk_root/platform-tools/adb}"
-  if [[ -z "${AAPT_BIN:-}" ]]; then
-    local build_tools_dir="$sdk_root/build-tools"
-    if [[ ! -d "$build_tools_dir" ]] || ! AAPT_BIN="$(find "$build_tools_dir" -mindepth 2 -maxdepth 2 -type f -name aapt -print 2>/dev/null | sort -V | tail -n 1)"; then
-      echo "Android platform/build tools are incomplete" >&2
-      return 2
-    fi
+  local build_tools_dir="$sdk_root/build-tools"
+  if [[ ! -d "$build_tools_dir" ]]; then
+    echo "Android platform/build tools are incomplete" >&2
+    return 2
   fi
-  [[ -x "$ADB_BIN" && -x "$AAPT_BIN" ]] || { echo "Android platform/build tools are incomplete" >&2; return 2; }
+  if [[ -z "${AAPT_BIN:-}" ]]; then
+    AAPT_BIN="$(find "$build_tools_dir" -mindepth 2 -maxdepth 2 -type f -name aapt -print 2>/dev/null | sort -V | tail -n 1)" || true
+  fi
+  if [[ -z "${APKSIGNER_BIN:-}" ]]; then
+    APKSIGNER_BIN="$(find "$build_tools_dir" -mindepth 2 -maxdepth 2 -type f -name apksigner -print 2>/dev/null | sort -V | tail -n 1)" || true
+  fi
+  [[ -x "$ADB_BIN" && -x "$AAPT_BIN" && -x "$APKSIGNER_BIN" ]] || { echo "Android platform/build tools are incomplete" >&2; return 2; }
 
-  export ADB_BIN AAPT_BIN
+  export ADB_BIN AAPT_BIN APKSIGNER_BIN
 }
