@@ -52,15 +52,14 @@ if ! [[ "$SMOKE_DURATION_SECONDS" =~ ^[0-9]+$ ]]; then
   exit 2
 fi
 
-if [[ "$SMOKE_DURATION_SECONDS" != "$DEFAULT_SMOKE_DURATION_SECONDS" ]]; then
-  if [[ "${SMOKE_TEST_MODE:-}" != "1" ]]; then
-    echo "Non-default SMOKE_DURATION_SECONDS requires SMOKE_TEST_MODE=1 and is test-only." >&2
-    exit 2
-  fi
-  if [[ -z "${SMOKE_RESULTS_DIR:-}" || "$RESULTS_DIR" == "$RELEASE_RESULTS_DIR" || "$RESULTS_DIR" == "$RELEASE_RESULTS_DIR"/* ]]; then
-    echo "Test-only SMOKE_DURATION_SECONDS requires SMOKE_RESULTS_DIR outside release evidence." >&2
-    exit 2
-  fi
+if [[ "$SMOKE_DURATION_SECONDS" != "$DEFAULT_SMOKE_DURATION_SECONDS" && "${SMOKE_TEST_MODE:-}" != "1" ]]; then
+  echo "Non-default SMOKE_DURATION_SECONDS requires SMOKE_TEST_MODE=1 and is test-only." >&2
+  exit 2
+fi
+
+if [[ "${SMOKE_TEST_MODE:-}" == "1" && ( "$RESULTS_DIR" == "$RELEASE_RESULTS_DIR" || "$RESULTS_DIR" == "$RELEASE_RESULTS_DIR"/* ) ]]; then
+  echo "Test-only SMOKE_DURATION_SECONDS requires SMOKE_RESULTS_DIR outside release evidence." >&2
+  exit 2
 fi
 
 mkdir -p "$RESULTS_DIR"

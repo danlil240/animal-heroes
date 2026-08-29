@@ -255,6 +255,29 @@ if [[ "$symlink_results_status" -eq 0 ]]; then
 fi
 echo "PASS: symlink release-results alias is rejected"
 
+for alias in "$ROOT_DIR/docs/test-results/." "$RELEASE_RESULTS_LINK"; do
+  set +e
+  default_alias_output="$(env \
+    ANDROID_SDK_ROOT="$SDK_DIR" \
+    FAKE_ADB_LOG="$ADB_LOG" \
+    FAKE_EVENT_LOG="$EVENT_LOG" \
+    REAL_SHA256SUM="$REAL_SHA256SUM" \
+    PATH="$TEMP_DIR/bin:$PATH" \
+    HOST_SERIAL=host-serial \
+    CLIENT_SERIAL=client-serial \
+    SMOKE_DURATION_SECONDS=600 \
+    SMOKE_TEST_MODE=1 \
+    SMOKE_RESULTS_DIR="$alias" \
+    bash "$SMOKE_SCRIPT" 2>&1)"
+  default_alias_status=$?
+  set -e
+  if [[ "$default_alias_status" -eq 0 ]]; then
+    echo "FAIL: default-duration test alias was accepted: $alias" >&2
+    exit 1
+  fi
+done
+echo "PASS: default-duration test aliases are rejected"
+
 set +e
 wrong_model_output="$(run_smoke FAKE_CLIENT_MODEL=Not-SM-T220 2>&1)"
 wrong_model_status=$?
