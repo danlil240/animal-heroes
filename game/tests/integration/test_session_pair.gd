@@ -7,6 +7,7 @@ const SHARED_LEVEL := "crystal_caves"
 
 var acknowledged_level := ""
 var third_reached_playing := false
+var incompatible_reached_playing := false
 
 
 func _init() -> void:
@@ -18,16 +19,16 @@ func _run() -> void:
 	if role.is_empty():
 		quit(0)
 		return
-	if role != "host" and role != "client" and role != "third":
-		_fail("role must be host, client, or third")
+	if role != "host" and role != "client" and role != "third" and role != "incompatible":
+		_fail("role must be host, client, third, or incompatible")
 		return
 	var session = root.get_node_or_null("Session")
 	if session == null:
 		_fail("Session autoload must be present")
 		return
-	if role == "third":
+	if role == "third" or role == "incompatible":
 		session.state_changed.connect(_capture_third_state)
-	var expected_playing := role != "third"
+	var expected_playing := role != "third" and role != "incompatible"
 	var result: Error = session.create_game() if role == "host" else session.join_game("127.0.0.1", 28740, "rabbit")
 	if result != OK:
 		_fail("%s could not start its session" % role)
@@ -40,7 +41,7 @@ func _run() -> void:
 		_fail("%s did not reach PLAYING" % role)
 		return
 	if not expected_playing and third_reached_playing:
-		_fail("third client was accepted")
+		_fail("%s client was accepted" % role)
 		return
 	if role == "host":
 		session.level_start_acknowledged.connect(_capture_level_ack)
@@ -60,8 +61,8 @@ func _run() -> void:
 		if session.current_level_id != SHARED_LEVEL:
 			_fail("client did not receive the host's level, got '%s'" % session.current_level_id)
 			return
-	if role == "third":
-		print("SESSION_RESULT role=third accepted=false")
+	if role == "third" or role == "incompatible":
+		print("SESSION_RESULT role=%s accepted=false" % role)
 	else:
 		print("SESSION_RESULT role=%s state=%s character=%s level=%s" % [role, session.state, session.selected_character, session.current_level_id])
 	if role == "client":

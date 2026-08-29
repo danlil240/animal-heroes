@@ -8,6 +8,13 @@ const STATE_MESSAGES := {
 	"playing": "מתחילים!",
 }
 
+const INCOMPATIBILITY_MESSAGES := {
+	"local_older": "צריך לעדכן את הטאבלט הזה לפני המשחק",
+	"remote_older": "צריך לעדכן את הטאבלט השני לפני המשחק",
+	"unknown": "גרסאות המשחק אינן תואמות. עדכנו את שני הטאבלטים",
+	"same": "גרסאות המשחק אינן תואמות. עדכנו את שני הטאבלטים",
+}
+
 
 func _ready() -> void:
 	var session = get_node_or_null("/root/Session")
@@ -25,3 +32,9 @@ func show_state(state: String) -> void:
 
 func show_discovery_timeout() -> void:
 	get_node("Panel/ManualIp").visible = true
+
+
+func show_incompatibility(relation: String) -> void:
+	get_node("Panel/Status").text = INCOMPATIBILITY_MESSAGES.get(relation, INCOMPATIBILITY_MESSAGES["unknown"])
+	get_node("Panel/ManualIp").visible = false
+	visible = true

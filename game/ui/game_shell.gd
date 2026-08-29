@@ -27,6 +27,7 @@ func _ready() -> void:
 	_discovery.name = "Discovery"
 	add_child(_discovery)
 	_discovery.host_found.connect(_on_host_found)
+	_discovery.incompatible_host_found.connect(_on_incompatible_host_found)
 	AppState.mode_started.connect(_on_mode_started)
 	AppState.results_requested.connect(_on_results_requested)
 	AppState.menu_requested.connect(_on_menu_requested)
@@ -86,7 +87,15 @@ func _host_level(level_id: String) -> void:
 func _on_host_found(info: Dictionary) -> void:
 	if _is_hosting or Session.state != Session.DISCOVERING:
 		return
-	Session.join_game(String(info.get("address", "")), int(info.get("port", 0)), GUEST_CHARACTER)
+	Session.join_game(String(info.get("host", "")), int(info.get("port", 0)), GUEST_CHARACTER)
+
+
+func _on_incompatible_host_found(info: Dictionary) -> void:
+	if _is_hosting or Session.state != Session.DISCOVERING:
+		return
+	var protocol = preload("res://network/protocol.gd")
+	var comparison := protocol.compare_builds(protocol.local_build_descriptor(), info.get("build", {}))
+	connection_overlay.show_incompatibility(String(comparison.get("relation", "unknown")))
 
 
 ## Both tablets are in the session, so the host announces the chosen level.
@@ -146,10 +155,17 @@ func _on_menu_requested() -> void:
 	show_menu()
 
 
-func _on_session_error(_message: String) -> void:
+func _on_session_error(message: String) -> void:
 	_leave_session()
+	_show_connection_error(message)
 	if not (_current_screen is Control) or _current_screen.scene_file_path != AppState.MENU_SCENE:
 		_show_scene(AppState.MENU_SCENE)
+
+
+func _show_connection_error(message: String) -> void:
+	connection_overlay.get_node("Panel/Status").text = message
+	connection_overlay.get_node("Panel/ManualIp").visible = false
+	connection_overlay.show()
 
 
 func _leave_session() -> void:

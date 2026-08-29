@@ -19,6 +19,20 @@ func _init() -> void:
 		if overlay.get_node("Panel/Status").text != expectations[state]:
 			_fail("overlay message missing for %s" % state)
 			return
+	if not overlay.has_method("show_incompatibility"):
+		_fail("overlay must show local compatibility messages")
+		return
+	var incompatibility_messages := {
+		"local_older": "צריך לעדכן את הטאבלט הזה לפני המשחק",
+		"remote_older": "צריך לעדכן את הטאבלט השני לפני המשחק",
+		"unknown": "גרסאות המשחק אינן תואמות. עדכנו את שני הטאבלטים",
+		"same": "גרסאות המשחק אינן תואמות. עדכנו את שני הטאבלטים",
+	}
+	for relation in incompatibility_messages:
+		overlay.show_incompatibility(relation)
+		if overlay.get_node("Panel/Status").text != incompatibility_messages[relation] or not overlay.visible:
+			_fail("overlay must map %s locally" % relation)
+			return
 	quit(0)
 
 

@@ -3,6 +3,7 @@ extends Node
 
 
 signal host_found(info: Dictionary)
+signal incompatible_host_found(info: Dictionary)
 
 const GameConfig = preload("res://core/game_config.gd")
 const Protocol = preload("res://network/protocol.gd")
@@ -15,6 +16,7 @@ var _receiver: PacketPeerUDP
 var _advertisement := PackedByteArray()
 var _advertise_elapsed := 0.0
 var _discovered: Dictionary = {}
+var _incompatible_discovered: Dictionary = {}
 
 
 func host(session_id: String, host_address: String = "", game_port: int = GameConfig.GAME_PORT) -> Error:
@@ -54,8 +56,9 @@ func stop() -> void:
 	if _receiver != null:
 		_receiver.close()
 		_receiver = null
-	_advertisement = PackedByteArray()
-	_discovered.clear()
+		_advertisement = PackedByteArray()
+		_discovered.clear()
+		_incompatible_discovered.clear()
 
 
 func known_hosts() -> Array[Dictionary]:
@@ -85,6 +88,13 @@ func ingest_packet(packet: PackedByteArray) -> bool:
 	var info := Protocol.decode_discovery(packet)
 	if info.is_empty():
 		return false
+	var comparison := Protocol.compare_builds(Protocol.local_build_descriptor(), info["build"])
+	if not bool(comparison.get("compatible", false)):
+		var incompatible_new := not _incompatible_discovered.has(info["session_id"])
+		_incompatible_discovered[info["session_id"]] = {"info": info, "seen_at": Time.get_ticks_msec() / 1000.0}
+		if incompatible_new:
+			incompatible_host_found.emit(info)
+		return true
 	var is_new := not _discovered.has(info["session_id"])
 	_discovered[info["session_id"]] = {"info": info, "seen_at": Time.get_ticks_msec() / 1000.0}
 	if is_new:
@@ -97,6 +107,9 @@ func _expire_hosts() -> void:
 	for session_id in _discovered.keys():
 		if now - _discovered[session_id]["seen_at"] > EXPIRY_SECONDS:
 			_discovered.erase(session_id)
+	for session_id in _incompatible_discovered.keys():
+		if now - _incompatible_discovered[session_id]["seen_at"] > EXPIRY_SECONDS:
+			_incompatible_discovered.erase(session_id)
 
 
 func _local_ipv4_address() -> String:
