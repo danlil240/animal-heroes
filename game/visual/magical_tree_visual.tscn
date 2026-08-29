@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://visual/magical_tree_visual.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://art/environment/sunny_forest/magical_tree.svg" id="2_tree"]
+
+[node name="MagicalTreeVisual" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Glow" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, -270, 150, -220, 205, -80, 160, 85, 0, 155, -160, 85, -205, -80, -150, -220)
+color = Color(1, 0.9, 0.36, 0.32)
+
+[node name="Tree" type="Sprite2D" parent="."]
+position = Vector2(0, -250)
+scale = Vector2(0.78, 0.78)
+texture = ExtResource("2_tree")
+
+[node name="Stars" type="Polygon2D" parent="."]
+visible = false
+position = Vector2(0, -280)
+polygon = PackedVector2Array(0, -135, 24, -44, 116, -72, 50, -7, 124, 54, 31, 41, 0, 130, -31, 41, -124, 54, -50, -7, -116, -72, -24, -44)
+color = Color(1, 0.84, 0.22, 0.72)

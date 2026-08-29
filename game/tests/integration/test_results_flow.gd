@@ -69,6 +69,18 @@ func _run() -> void:
 		_fail("winner_peer_id must be 2, got %d" % screen.winner_peer_id)
 		return
 
+	# Case 6: cooperative results show one shared scoreboard and collected stars.
+	screen.show_result({"winner_peer_id": 0, "scores": {}, "team_score": 235, "stars_collected": 7})
+	if screen.displayed_team_score != 235 or screen.displayed_stars != 7:
+		_fail("cooperative result must retain shared team score and stars")
+		return
+	var result_text := ""
+	for label in screen.get_node("Margin/VBox/Scores").get_children():
+		result_text += String(label.text)
+	if not result_text.contains("235") or not result_text.contains("7"):
+		_fail("cooperative scoreboard must visibly show team score and stars")
+		return
+
 	screen.queue_free()
 	await process_frame
 	quit(0)

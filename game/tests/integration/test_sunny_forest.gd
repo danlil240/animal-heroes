@@ -38,10 +38,31 @@ func _run() -> void:
 		_fail("sunny forest Exit must require two players")
 		return
 	var enemies: Array = level.get_tree().get_nodes_in_group("enemy")
-	if enemies.size() < 1:
-		_fail("sunny forest must have at least one enemy")
+	if enemies.size() < 4:
+		_fail("sunny forest must have at least four playable enemies")
+		return
+	var enemy_kinds: Dictionary = {}
+	for enemy in enemies:
+		enemy_kinds[String(enemy.get("enemy_kind"))] = true
+	if not enemy_kinds.has("beetle") or not enemy_kinds.has("seed"):
+		_fail("sunny forest must contain beetle and hopping-seed enemies")
+		return
+	for section_name in ["SunlitMeadow", "FallenLogCrossing", "BubbleGrove", "MagicalTreeFinish"]:
+		if level.get_node_or_null(section_name) == null:
+			_fail("sunny forest must expose section %s" % section_name)
+			return
+	if level.get_node_or_null("HUD/GameplayHud") == null:
+		_fail("sunny forest must include the shared gameplay HUD")
 		return
 	if not _test_platforms_are_reachable(level):
+		return
+	if not _test_authoritative_star_and_enemy_score(level):
+		return
+	if not _test_role_gated_fallen_log(level):
+		return
+	if not _test_bubble_inventory_and_pool(level):
+		return
+	if not _test_pressure_gate_and_two_player_finish(level):
 		return
 	level.queue_free()
 	await process_frame
@@ -68,6 +89,137 @@ func _test_platforms_are_reachable(level: Node) -> bool:
 				hero_name, reach, lowest_step,
 			])
 			return false
+	return true
+
+
+## Catches simultaneous collection or defeat events scoring more than once.
+func _test_authoritative_star_and_enemy_score(level: Node) -> bool:
+	var star = level.get_node("Collectibles/Star1")
+	level.get_node("Rabbit").global_position = star.global_position
+	if not level.process_world_action(1, 1, "collect", "star-1", star.global_position):
+		_fail("host must accept an in-range star collection")
+		return false
+	if level.process_world_action(1, 2, "collect", "star-1", star.global_position):
+		_fail("already-collected star must reject a second world action")
+		return false
+	if level.team_score.total != 10:
+		_fail("one collected star must add exactly 10 team points")
+		return false
+	if not level.register_enemy_defeat("beetle-meadow-1", 1):
+		_fail("first enemy defeat must be recorded")
+		return false
+	if level.register_enemy_defeat("beetle-meadow-1", 2) or level.team_score.total != 35:
+		_fail("duplicate enemy defeat must not score twice")
+		return false
+	return true
+
+
+## Catches either character bypassing the complementary-role teamwork gate.
+func _test_role_gated_fallen_log(level: Node) -> bool:
+	var log_target: Node2D = level.get_node("FallenLogCrossing/FallenLog")
+	var switch_target: Node2D = level.get_node("FallenLogCrossing/OverheadSwitch")
+	level.get_node("Rabbit").global_position = log_target.global_position
+	if level.process_world_action(1, 3, "push", "fallen-log", log_target.global_position):
+		_fail("Riki must not perform Foxy's heavy log push")
+		return false
+	level.get_node("Fox").global_position = log_target.global_position
+	if not level.process_world_action(2, 1, "push", "fallen-log", log_target.global_position):
+		_fail("Foxy must be able to push the fallen log")
+		return false
+	level.get_node("Fox").global_position = switch_target.global_position
+	if level.process_world_action(2, 2, "switch", "overhead-switch", switch_target.global_position):
+		_fail("Foxy must not perform Riki's overhead switch action")
+		return false
+	level.get_node("Rabbit").global_position = switch_target.global_position
+	if not level.process_world_action(1, 4, "switch", "overhead-switch", switch_target.global_position):
+		_fail("Riki must be able to activate the overhead switch")
+		return false
+	if not level.gate_is_open("fallen-log") or level.team_score.total != 135:
+		_fail("two role actions must open the log gate and add 100 team points")
+		return false
+	return true
+
+
+## Catches bubble pickup not granting five, firing not consuming one, or the
+## active projectile budget growing beyond six.
+func _test_bubble_inventory_and_pool(level: Node) -> bool:
+	if level.grant_bubbles(1) != 5:
+		_fail("bubble flower must grant five shots")
+		return false
+	var rabbit = level.get_node("Rabbit")
+	rabbit.global_position = Vector2(400, 640)
+	rabbit.facing_direction = 1.0
+	var action_frame = load("res://player/player_input.gd").InputFrame.new()
+	action_frame.action = true
+	rabbit.apply_input(action_frame)
+	level._step_level(0.0)
+	if level.active_bubble_count() != 1:
+		_fail("context action with no nearby object must fire a bubble")
+		return false
+	if level.bubble_ammo.remaining(1) != 4 or level.active_bubble_count() != 1:
+		_fail("bubble fire must consume one shot and activate one projectile")
+		return false
+	for shot in 4:
+		if not level.fire_bubble(1, Vector2(1800, 620), 1.0):
+			_fail("remaining granted bubble shot %d must fire" % shot)
+			return false
+	if level.fire_bubble(1, Vector2(1800, 620), 1.0):
+		_fail("empty bubble inventory must reject firing")
+		return false
+	if level.active_bubble_count() != 5:
+		_fail("five granted shots must produce five active bounded projectiles")
+		return false
+	return true
+
+
+## Catches one pressure flower opening the path or one hero finishing alone.
+func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
+	if level.activate_teamwork_part("bubble-grove", "left-flower", 1):
+		_fail("one pressure flower must not complete Bubble Grove")
+		return false
+	if level.activate_teamwork_part("bubble-grove", "right-flower", 1):
+		_fail("one hero must not complete both Bubble Grove pressure flowers")
+		return false
+	if not level.activate_teamwork_part("bubble-grove", "right-flower", 2):
+		_fail("both pressure flowers must open Bubble Grove")
+		return false
+	if not level.gate_is_open("bubble-grove") or level.team_score.total != 235:
+		_fail("pressure gate must award one 100-point teamwork bonus")
+		return false
+	var world_snapshot: Dictionary = level.world_state_snapshot()
+	for required_key in ["score", "collected_ids", "checkpoint_id", "heroes", "enemies", "gates", "ammo", "projectiles", "event_sequence"]:
+		if not world_snapshot.has(required_key):
+			_fail("Sunny Forest reconnect snapshot is missing %s" % required_key)
+			return false
+	if world_snapshot.get("enemies", []).size() < 4 or world_snapshot.get("projectiles", []).size() != 5:
+		_fail("snapshot must include enemy and active bubble world state")
+		return false
+	level.register_enemy_defeat("after-snapshot", 1)
+	level.grant_bubbles(1)
+	if not level.restore_world_state(world_snapshot):
+		_fail("valid Sunny Forest world snapshot must restore")
+		return false
+	if level.team_score.total != 235 or level.bubble_ammo.remaining(1) != 0 or level.active_bubble_count() != 5:
+		_fail("snapshot restore must replace score, ammo, and active projectiles")
+		return false
+	var results: Array[Dictionary] = []
+	level.level_finished.connect(func(result: Dictionary) -> void: results.append(result))
+	if level.enter_finish(1) or level.is_finished():
+		_fail("one hero cannot finish the cooperative level alone")
+		return false
+	level.leave_finish(1)
+	if level.enter_finish(2) or level.is_finished():
+		_fail("heroes must be at the magical tree together, not one after another")
+		return false
+	if not level.enter_finish(1) or not level.is_finished():
+		_fail("both heroes at the magical tree must finish the level")
+		return false
+	if results.size() != 1 or int(results[0].get("team_score", -1)) != 235:
+		_fail("finish payload must contain the authoritative team score")
+		return false
+	if String(results[0].get("next_level_id", "")) != "crystal_caves":
+		_fail("Sunny Forest finish must unlock Crystal Caves")
+		return false
 	return true
 
 

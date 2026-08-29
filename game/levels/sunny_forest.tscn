@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=38 format=3]
 
 [ext_resource type="Script" path="res://levels/sunny_forest.gd" id="1_forest"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -18,6 +18,14 @@
 [ext_resource type="PackedScene" path="res://visual/enemy_visual.tscn" id="16_enemy_visual"]
 [ext_resource type="PackedScene" path="res://visual/powerup_visual.tscn" id="17_powerup_visual"]
 [ext_resource type="PackedScene" path="res://visual/exit_visual.tscn" id="18_exit_visual"]
+[ext_resource type="PackedScene" path="res://world/beetle_enemy.tscn" id="19_beetle"]
+[ext_resource type="PackedScene" path="res://world/seed_enemy.tscn" id="20_seed"]
+[ext_resource type="Script" path="res://world/interactable.gd" id="21_interactable"]
+[ext_resource type="PackedScene" path="res://ui/gameplay_hud.tscn" id="22_gameplay_hud"]
+[ext_resource type="Texture2D" path="res://art/objects/fallen_log.svg" id="23_log"]
+[ext_resource type="Texture2D" path="res://art/objects/pressure_flower.svg" id="24_pressure"]
+[ext_resource type="Texture2D" path="res://art/objects/bubble_flower.svg" id="25_bubble_flower"]
+[ext_resource type="PackedScene" path="res://visual/magical_tree_visual.tscn" id="26_magical_tree"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(3200, 80)
@@ -46,11 +54,165 @@ size = Vector2(120, 120)
 [sub_resource type="RectangleShape2D" id="PowerupShape"]
 size = Vector2(40, 40)
 
+[sub_resource type="RectangleShape2D" id="InteractShape"]
+size = Vector2(72, 72)
+
+[sub_resource type="RectangleShape2D" id="BarrierShape"]
+size = Vector2(44, 220)
+
 [node name="SunnyForest" type="Node2D"]
 script = ExtResource("1_forest")
 level_id = "sunny_forest"
 
 [node name="SunnyForestBackground" parent="." instance=ExtResource("15_background")]
+
+[node name="SunlitMeadow" type="Node2D" parent="."]
+
+[node name="BeetleMeadow1" parent="SunlitMeadow" groups=["enemy"] instance=ExtResource("19_beetle")]
+position = Vector2(680, 696)
+enemy_id = "beetle-meadow-1"
+patrol_range = 90.0
+
+[node name="SeedMeadow1" parent="SunlitMeadow" groups=["enemy"] instance=ExtResource("20_seed")]
+position = Vector2(930, 696)
+enemy_id = "seed-meadow-1"
+
+[node name="FallenLogCrossing" type="Node2D" parent="."]
+
+[node name="FallenLog" type="Area2D" parent="FallenLogCrossing" groups=["sunny_interactable"]]
+position = Vector2(1110, 656)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("21_interactable")
+interactable_id = "fallen-log"
+interaction_kind = "push"
+interaction_priority = 80
+required_character = "fox"
+heavy = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FallenLogCrossing/FallenLog"]
+shape = SubResource("InteractShape")
+
+[node name="LogVisual" type="Sprite2D" parent="FallenLogCrossing/FallenLog"]
+position = Vector2(0, -20)
+texture = ExtResource("23_log")
+
+[node name="OverheadSwitch" type="Area2D" parent="FallenLogCrossing" groups=["sunny_interactable"]]
+position = Vector2(1370, 440)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("21_interactable")
+interactable_id = "overhead-switch"
+interaction_kind = "switch"
+interaction_priority = 90
+required_character = "rabbit"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FallenLogCrossing/OverheadSwitch"]
+shape = SubResource("InteractShape")
+
+[node name="SwitchVisual" type="Polygon2D" parent="FallenLogCrossing/OverheadSwitch"]
+polygon = PackedVector2Array(0, -34, 12, -12, 36, -8, 18, 10, 22, 34, 0, 22, -22, 34, -18, 10, -36, -8, -12, -12)
+color = Color(1, 0.78, 0.18, 1)
+
+[node name="GateBarrier" type="StaticBody2D" parent="FallenLogCrossing"]
+position = Vector2(1600, 610)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FallenLogCrossing/GateBarrier"]
+shape = SubResource("BarrierShape")
+
+[node name="BarrierVisual" type="Polygon2D" parent="FallenLogCrossing/GateBarrier"]
+polygon = PackedVector2Array(-22, -110, 22, -110, 22, 110, -22, 110)
+color = Color(0.22, 0.54, 0.22, 1)
+
+[node name="BeetleCrossing" parent="FallenLogCrossing" groups=["enemy"] instance=ExtResource("19_beetle")]
+position = Vector2(1260, 696)
+enemy_id = "beetle-crossing-1"
+patrol_range = 70.0
+
+[node name="BubbleGrove" type="Node2D" parent="."]
+
+[node name="BubbleFlower" type="Area2D" parent="BubbleGrove" groups=["bubble_powerup", "sunny_interactable"]]
+position = Vector2(1810, 540)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("21_interactable")
+interactable_id = "bubble-flower"
+interaction_kind = "pickup"
+interaction_priority = 100
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BubbleGrove/BubbleFlower"]
+shape = SubResource("PowerupShape")
+
+[node name="FlowerVisual" type="Sprite2D" parent="BubbleGrove/BubbleFlower"]
+position = Vector2(0, -42)
+scale = Vector2(0.72, 0.72)
+texture = ExtResource("25_bubble_flower")
+
+[node name="LeftFlower" type="Area2D" parent="BubbleGrove" groups=["sunny_interactable"]]
+position = Vector2(1990, 672)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("21_interactable")
+interactable_id = "left-flower"
+interaction_kind = "switch"
+interaction_priority = 70
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BubbleGrove/LeftFlower"]
+shape = SubResource("InteractShape")
+
+[node name="Visual" type="Sprite2D" parent="BubbleGrove/LeftFlower"]
+position = Vector2(0, -35)
+scale = Vector2(0.72, 0.72)
+texture = ExtResource("24_pressure")
+
+[node name="RightFlower" type="Area2D" parent="BubbleGrove" groups=["sunny_interactable"]]
+position = Vector2(2110, 672)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("21_interactable")
+interactable_id = "right-flower"
+interaction_kind = "switch"
+interaction_priority = 70
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BubbleGrove/RightFlower"]
+shape = SubResource("InteractShape")
+
+[node name="Visual" type="Sprite2D" parent="BubbleGrove/RightFlower"]
+position = Vector2(0, -35)
+scale = Vector2(0.72, 0.72)
+texture = ExtResource("24_pressure")
+
+[node name="GateBarrier" type="StaticBody2D" parent="BubbleGrove"]
+position = Vector2(2260, 610)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BubbleGrove/GateBarrier"]
+shape = SubResource("BarrierShape")
+
+[node name="BarrierVisual" type="Polygon2D" parent="BubbleGrove/GateBarrier"]
+polygon = PackedVector2Array(-22, -110, 22, -110, 22, 110, -22, 110)
+color = Color(0.25, 0.7, 0.66, 0.92)
+
+[node name="SeedGrove1" parent="BubbleGrove" groups=["enemy"] instance=ExtResource("20_seed")]
+position = Vector2(2380, 696)
+enemy_id = "seed-grove-1"
+
+[node name="MagicalTreeFinish" type="Node2D" parent="."]
+
+[node name="MagicalTree" type="Area2D" parent="MagicalTreeFinish" groups=["sunny_interactable"]]
+position = Vector2(3050, 656)
+collision_layer = 0
+collision_mask = 0
+script = ExtResource("21_interactable")
+interactable_id = "magical-tree"
+interaction_kind = "finish"
+interaction_priority = 110
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MagicalTreeFinish/MagicalTree"]
+shape = SubResource("ExitShape")
+
+[node name="Visual" parent="MagicalTreeFinish/MagicalTree" instance=ExtResource("26_magical_tree")]
+
+[node name="Bubbles" type="Node2D" parent="."]
 
 [node name="RabbitSpawn" type="Marker2D" parent="." groups=["player_spawn"]]
 position = Vector2(80, 656)
@@ -288,33 +450,6 @@ shape = SubResource("CollectibleShape")
 [node name="Visual" parent="Collectibles/Star12" instance=ExtResource("12_star_visual")]
 phase_offset = 6.6
 
-[node name="Enemy1" type="Node2D" parent="." groups=["enemy"]]
-position = Vector2(700, 696)
-script = ExtResource("8_enemy")
-patrol_speed = 50.0
-patrol_range = 100.0
-
-[node name="Visual" parent="Enemy1" instance=ExtResource("16_enemy_visual")]
-
-[node name="Enemy2" type="Node2D" parent="." groups=["enemy"]]
-position = Vector2(2000, 696)
-script = ExtResource("8_enemy")
-patrol_speed = 70.0
-patrol_range = 120.0
-
-[node name="Visual" parent="Enemy2" instance=ExtResource("16_enemy_visual")]
-
-[node name="BubblePowerup" type="Area2D" parent="." groups=["bubble_powerup"]]
-position = Vector2(1500, 380)
-script = ExtResource("9_powerup")
-kind = "bubble"
-duration = 5.0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="BubblePowerup"]
-shape = SubResource("PowerupShape")
-
-[node name="Visual" parent="BubblePowerup" instance=ExtResource("17_powerup_visual")]
-
 [node name="Exit" type="Area2D" parent="."]
 position = Vector2(3050, 656)
 script = ExtResource("10_exit")
@@ -324,6 +459,7 @@ required_players = 2
 shape = SubResource("ExitShape")
 
 [node name="Visual" parent="Exit" instance=ExtResource("18_exit_visual")]
+visible = false
 
 [node name="FallRespawn" type="Area2D" parent="."]
 position = Vector2(1600, 930)
@@ -370,6 +506,8 @@ limit_bottom = 800
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="TouchControls" parent="HUD" instance=ExtResource("5_touch")]
+
+[node name="GameplayHud" parent="HUD" instance=ExtResource("22_gameplay_hud")]
 
 [node name="PartnerIndicator" type="Control" parent="HUD"]
 layout_mode = 0

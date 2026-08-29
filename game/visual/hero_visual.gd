@@ -9,6 +9,7 @@ var _last_action_pressed: bool = false
 var _last_hearts: int = -1
 var _last_body_position: Vector2
 var _effect_tween: Tween
+var _celebration_remaining: float = 0.0
 
 
 func _ready() -> void:
@@ -37,14 +38,22 @@ func _process(delta: float) -> void:
 	var target_position := Vector2(0.0, -30.0)
 	var target_rotation := 0.0
 	var target_stretch := Vector2.ONE
-	if grounded and speed < 1.0:
+	if _celebration_remaining > 0.0:
+		_celebration_remaining = maxf(_celebration_remaining - step, 0.0)
+		target_position.y -= absf(sin(_elapsed * 10.0)) * 18.0
+		target_rotation = sin(_elapsed * 10.0) * 0.12
+		$CelebrationBurst.visible = true
+		$CelebrationBurst.rotation += step * 1.8
+	else:
+		$CelebrationBurst.visible = false
+	if _celebration_remaining <= 0.0 and grounded and speed < 1.0:
 		target_position.y += sin(_elapsed * 3.2) * 2.0
-	elif grounded:
+	elif _celebration_remaining <= 0.0 and grounded:
 		target_position.y += sin(_elapsed * 12.0) * 5.0
 		target_rotation = sin(_elapsed * 12.0) * 0.05
-	elif _body.velocity.y < 0.0:
+	elif _celebration_remaining <= 0.0 and _body.velocity.y < 0.0:
 		target_stretch = Vector2(0.94, 1.08)
-	else:
+	elif _celebration_remaining <= 0.0:
 		target_stretch = Vector2(1.05, 0.95)
 	var direction: float = _body.facing_direction if "facing_direction" in _body else 1.0
 	target_stretch.x *= direction
@@ -81,11 +90,23 @@ func _play_action_effect() -> void:
 
 
 func _play_recoil() -> void:
+	play_damage()
+
+
+func play_damage() -> void:
 	if _effect_tween != null:
 		_effect_tween.kill()
 	_effect_tween = create_tween()
 	_effect_tween.tween_property($Pose, "modulate", Color(1.0, 0.55, 0.55, 1.0), 0.08)
 	_effect_tween.tween_property($Pose, "modulate", Color.WHITE, 0.10)
+
+
+func play_celebration() -> void:
+	_celebration_remaining = 1.2
+	$CelebrationBurst.visible = true
+	$CelebrationBurst.scale = Vector2(0.35, 0.35)
+	var tween := create_tween()
+	tween.tween_property($CelebrationBurst, "scale", Vector2.ONE, 0.2)
 
 
 func _play_recovery() -> void:

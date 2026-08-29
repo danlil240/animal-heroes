@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://visual/sunny_forest_background.gd" id="1_bg"]
 [ext_resource type="Texture2D" path="res://art/environment/sunny_forest/cloud.svg" id="2_cloud"]
@@ -6,6 +6,8 @@
 [ext_resource type="Texture2D" path="res://art/environment/sunny_forest/foliage_cluster.svg" id="4_foliage"]
 [ext_resource type="Texture2D" path="res://art/environment/sunny_forest/flower_cluster.svg" id="5_flowers"]
 [ext_resource type="Texture2D" path="res://art/environment/sunny_forest/mushroom.svg" id="6_mushroom"]
+[ext_resource type="Texture2D" path="res://art/environment/sunny_forest/near_trees.svg" id="7_near"]
+[ext_resource type="Texture2D" path="res://art/environment/sunny_forest/leaf_frame.svg" id="8_frame"]
 
 [sub_resource type="Gradient" id="GradientSky"]
 offsets = PackedFloat32Array(0, 1)
@@ -58,6 +60,21 @@ scale = Vector2(0.85, 0.85)
 modulate = Color(0.47, 0.8, 0.67, 0.82)
 texture = ExtResource("4_foliage")
 
+[node name="Near" type="Node2D" parent="."]
+z_index = 3
+
+[node name="TreesA" type="Sprite2D" parent="Near"]
+position = Vector2(340, 430)
+scale = Vector2(0.72, 0.72)
+modulate = Color(1, 1, 1, 0.9)
+texture = ExtResource("7_near")
+
+[node name="TreesB" type="Sprite2D" parent="Near"]
+position = Vector2(1710, 430)
+scale = Vector2(-0.68, 0.68)
+modulate = Color(0.92, 1, 0.94, 0.88)
+texture = ExtResource("7_near")
+
 [node name="Frame" type="Node2D" parent="."]
 z_index = 60
 
@@ -70,6 +87,11 @@ texture = ExtResource("4_foliage")
 position = Vector2(1550, 60)
 scale = Vector2(-0.58, 0.58)
 texture = ExtResource("4_foliage")
+
+[node name="StorybookLeaves" type="Sprite2D" parent="Frame"]
+position = Vector2(210, 52)
+scale = Vector2(0.92, 0.92)
+texture = ExtResource("8_frame")
 
 [node name="Flowers" type="Sprite2D" parent="Frame"]
 position = Vector2(122, 675)
