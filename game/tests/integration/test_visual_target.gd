@@ -97,12 +97,14 @@ func _test_background_parallax() -> bool:
 	var background = background_scene.instantiate()
 	root.add_child(background)
 	await process_frame
-	for layer_name in ["Sky", "Far", "Mid", "Frame"]:
+	for layer_name in ["Sky", "Far", "Mid", "Near", "Frame"]:
 		if background.get_node_or_null(layer_name) == null:
 			return _fail_bool("sunny forest background is missing %s" % layer_name)
 	background.set_focus_x(400.0)
 	if is_equal_approx(background.get_node("Far").position.x, background.get_node("Mid").position.x):
 		return _fail_bool("far and mid forest layers must use different parallax ratios")
+	if is_equal_approx(background.get_node("Mid").position.x, background.get_node("Near").position.x):
+		return _fail_bool("mid and near forest layers must use different parallax ratios")
 	background.queue_free()
 	return true
 
@@ -154,6 +156,8 @@ func _test_hero_presentation() -> bool:
 			return _fail_bool("%s must keep gameplay nodes and gain a Visual child" % hero_name)
 		if hero.get_node_or_null("BodyArt") != null:
 			return _fail_bool("%s must not retain placeholder body art" % hero_name)
+		if not visual.has_method("play_celebration") or not visual.has_method("play_damage"):
+			return _fail_bool("%s visual must expose celebration and damage poses" % hero_name)
 		# The art has to stand on the same line the collision box rests on,
 		# otherwise the hero reads as floating above the ground.
 		var shape: CollisionShape2D = hero.get_node("CollisionShape2D")
@@ -168,6 +172,18 @@ func _test_hero_presentation() -> bool:
 		if hero.position != before_position or hero.velocity != before_velocity:
 			return _fail_bool("hero presentation must not mutate %s physics state" % hero_name)
 	arena.queue_free()
+	for visual_path in [
+		"res://visual/magical_tree_visual.tscn",
+		"res://art/objects/fallen_log.svg",
+		"res://art/objects/pressure_flower.svg",
+		"res://art/objects/bubble_flower.svg",
+	]:
+		if load(visual_path) == null:
+			return _fail_bool("storybook gameplay visual must load: %s" % visual_path)
+	for enemy_path in ["res://world/beetle_enemy.tscn", "res://world/seed_enemy.tscn"]:
+		var enemy = load(enemy_path).instantiate()
+		if not enemy.get_node("Visual").has_method("show_enemy_state"):
+			return _fail_bool("enemy art must animate readable movement and defeat states: %s" % enemy_path)
 	return true
 
 

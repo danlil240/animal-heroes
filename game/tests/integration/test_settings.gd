@@ -17,7 +17,14 @@ func _run() -> void:
 		return
 	var save_store: Node = SaveStoreScript.new()
 	var director: Node = AudioDirectorScript.new()
-	director._setup_buses()
+	root.add_child(director)
+	await process_frame
+	if not director.play_gameplay_cue("star") or not director.play_gameplay_cue("bubble", 1):
+		_fail("known gameplay cues must use the bounded SFX pool")
+		return
+	if director.play_gameplay_cue("unknown"):
+		_fail("unknown gameplay cue must be rejected")
+		return
 
 	# Test bus existence
 	if AudioServer.get_bus_index("Music") == -1:

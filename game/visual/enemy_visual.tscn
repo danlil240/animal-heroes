@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Texture2D" path="res://art/objects/enemy_bug.svg" id="1_tex"]
+[ext_resource type="Script" path="res://visual/enemy_visual.gd" id="2_script"]
 
 [node name="EnemyVisual" type="Sprite2D"]
 texture = ExtResource("1_tex")
+script = ExtResource("2_script")

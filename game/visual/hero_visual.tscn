@@ -25,3 +25,9 @@ texture = ExtResource("3_fox")
 position = Vector2(58, -25)
 scale = Vector2(0.25, 0.25)
 texture = ExtResource("4_bubble")
+
+[node name="CelebrationBurst" type="Polygon2D" parent="."]
+visible = false
+position = Vector2(0, -54)
+polygon = PackedVector2Array(0, -58, 13, -19, 52, -32, 25, 2, 56, 26, 16, 22, 0, 60, -16, 22, -56, 26, -25, 2, -52, -32, -13, -19)
+color = Color(1, 0.84, 0.22, 0.75)
