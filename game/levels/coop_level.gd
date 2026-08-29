@@ -6,11 +6,15 @@ extends TwoPlayerLevel
 ## payload the app shell needs in order to unlock and open the next level.
 
 const CoopModeScript := preload("res://modes/coop_mode.gd")
+const TeamScoreScript := preload("res://core/team_score.gd")
+const BubbleInventoryScript := preload("res://player/bubble_inventory.gd")
 
 ## Campaign identifier for this level; set on the scene root.
 @export var level_id: String = ""
 
 var coop_mode: RefCounted = null
+var team_score: RefCounted = null
+var bubble_ammo: RefCounted = null
 var _collected_stars: int = 0
 
 
@@ -18,6 +22,10 @@ func _setup_level() -> void:
 	if level_id.is_empty():
 		push_error("cooperative level must declare level_id")
 	coop_mode = CoopModeScript.new()
+	team_score = TeamScoreScript.new()
+	bubble_ammo = BubbleInventoryScript.new()
+	rabbit.peer_id = 1
+	fox.peer_id = 2
 	coop_mode.start(level_id, levels_unlocked_through(level_id))
 	coop_mode.level_completed.connect(_on_coop_level_completed)
 	coop_mode.campaign_completed.connect(_on_coop_campaign_completed)
@@ -28,6 +36,7 @@ func _setup_level() -> void:
 		if collectible is Area2D and collectible.has_signal("body_entered"):
 			collectible.body_entered.connect(_on_collectible_entered.bind(collectible))
 	_setup_coop_level()
+	_render_gameplay_hud()
 
 
 func _setup_coop_level() -> void:
@@ -53,6 +62,7 @@ static func next_campaign_level(id: String) -> String:
 
 func _on_checkpoint_activated(checkpoint_id: String, _peer_id: int) -> void:
 	coop_mode.confirm_checkpoint(checkpoint_id)
+	AudioDirector.play_gameplay_cue("checkpoint")
 	var checkpoint_position := _checkpoint_position(checkpoint_id)
 	for hero in [rabbit, fox]:
 		hero.checkpoint_position = checkpoint_position
@@ -63,8 +73,41 @@ func _on_collectible_entered(body: Node2D, collectible: Area2D) -> void:
 		return
 	if collectible.is_queued_for_deletion():
 		return
+	collect_star(_collectible_id(collectible), collectible)
+
+
+func collect_star(star_id: String, collectible: Node = null) -> bool:
+	var points: int = team_score.award("star:%s" % star_id, "star")
+	if points <= 0:
+		return false
 	_collected_stars += 1
-	collectible.queue_free()
+	AudioDirector.play_gameplay_cue("star")
+	if collectible != null and is_instance_valid(collectible):
+		collectible.queue_free()
+	_show_score_gain(points, collectible.global_position if collectible is Node2D else Vector2.ZERO)
+	_render_gameplay_hud()
+	return true
+
+
+func _render_gameplay_hud() -> void:
+	var hud = get_node_or_null("HUD/GameplayHud")
+	if hud == null or not hud.has_method("render"):
+		return
+	var local_peer_id := int(_local_hero().get("peer_id"))
+	hud.render(team_score.total, rabbit.hearts, fox.hearts, bubble_ammo.remaining(local_peer_id))
+
+
+func _show_score_gain(points: int, world_position: Vector2) -> void:
+	var hud = get_node_or_null("HUD/GameplayHud")
+	if hud != null and hud.has_method("show_score_gain"):
+		hud.show_score_gain(points, world_position)
+
+
+func _collectible_id(collectible: Node) -> String:
+	var raw_name := String(collectible.name)
+	if raw_name.begins_with("Star") and raw_name.trim_prefix("Star").is_valid_int():
+		return "star-%s" % raw_name.trim_prefix("Star")
+	return raw_name.to_snake_case()
 
 
 func _checkpoint_position(checkpoint_id: String) -> Vector2:
@@ -83,6 +126,7 @@ func _on_coop_level_completed(completed_level_id: String) -> void:
 		"campaign_completed": coop_mode.is_campaign_completed(),
 		"winner_peer_id": 0,
 		"scores": {},
+		"team_score": team_score.total,
 		"stars_collected": _collected_stars,
 	})
 
@@ -96,4 +140,5 @@ func _on_coop_campaign_completed(unlocked_levels: Array) -> void:
 		"campaign_completed": true,
 		"winner_peer_id": 0,
 		"scores": {},
+		"team_score": team_score.total,
 	})

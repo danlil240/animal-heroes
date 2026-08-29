@@ -9,6 +9,7 @@ const CONTEXT_ICONS := {
 	"push": "↔",
 	"pickup": "◯",
 	"finish": "★",
+	"bubble": "◯",
 }
 
 

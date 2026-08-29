@@ -128,6 +128,23 @@ const LEVEL_MUSIC := {
 	"test_arena": MUSIC_SUNNY_FOREST,
 }
 
+const GAMEPLAY_CUES := {
+	"star": false,
+	"enemy": false,
+	"teamwork": false,
+	"damage": false,
+	"checkpoint": false,
+	"bubble": true,
+	"finish": false,
+}
+
+
+func play_gameplay_cue(cue: String, _peer_id: int = 0) -> bool:
+	if not GAMEPLAY_CUES.has(cue):
+		return false
+	play_sfx(SFX_GAMEPLAY, bool(GAMEPLAY_CUES[cue]))
+	return true
+
 
 func play_level_music(level_id: String) -> void:
 	play_music(LEVEL_MUSIC.get(level_id, MUSIC_SUNNY_FOREST))

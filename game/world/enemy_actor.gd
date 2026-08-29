@@ -33,6 +33,10 @@ var _state_elapsed: float = 0.0
 var _defeat_emitted: bool = false
 
 
+func _init() -> void:
+	body_entered.connect(_on_body_entered)
+
+
 func _ready() -> void:
 	if enemy_id.is_empty():
 		enemy_id = name.to_snake_case()
@@ -134,6 +138,16 @@ func _defeat(peer_id: int) -> bool:
 		defeated.emit(enemy_id, peer_id)
 	_update_visual_state()
 	return true
+
+
+func _on_body_entered(body: Node2D) -> void:
+	if not body is CharacterBody2D or not body.has_method("take_world_hit"):
+		return
+	var peer_id := int(body.get("peer_id"))
+	if try_stomp(body.global_position, (body as CharacterBody2D).velocity, peer_id):
+		(body as CharacterBody2D).velocity.y = -220.0
+		return
+	try_contact(body)
 
 
 func _set_collision_enabled(enabled: bool) -> void:

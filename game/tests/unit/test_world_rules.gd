@@ -385,6 +385,16 @@ func _test_beetle_actor_patrol_contact_and_stomp() -> void:
 		return
 	if emissions != [1]:
 		_fail("beetle defeat must emit exactly once")
+		return
+	var collision_beetle = scene.instantiate()
+	root.add_child(collision_beetle)
+	var falling_player = _make_player_body(1)
+	falling_player.snapshot()
+	falling_player.global_position = collision_beetle.global_position + Vector2(0, -24)
+	falling_player.velocity = Vector2(0, 140)
+	collision_beetle.emit_signal("body_entered", falling_player)
+	if collision_beetle.motion_state != collision_beetle.DEFEATED:
+		_fail("enemy body overlap must route a descending hero to stomp logic")
 
 
 ## Catches the seed jumping without warning or bubbles failing to defeat it.
