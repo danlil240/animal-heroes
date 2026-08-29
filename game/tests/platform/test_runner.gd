@@ -105,14 +105,6 @@ func _disable_auto_processing() -> void:
 		_rabbit.set_physics_process(false)
 	if _fox != null:
 		_fox.set_physics_process(false)
-	# Mark heroes/level PROCESS_MODE_ALWAYS so manual physics_step / move_and_slide
-	# still work when the tree is paused for deterministic rendering.
-	if _level != null:
-		_level.process_mode = Node.PROCESS_MODE_ALWAYS
-	if _rabbit != null:
-		_rabbit.process_mode = Node.PROCESS_MODE_ALWAYS
-	if _fox != null:
-		_fox.process_mode = Node.PROCESS_MODE_ALWAYS
 
 
 func _disable_subtree_processing(node: Node) -> void:
@@ -126,9 +118,7 @@ func _disable_subtree_processing(node: Node) -> void:
 func _run_loop() -> void:
 	var delta := 1.0 / float(PHYSICS_HZ)
 	var total := _timeline.total_frames()
-	var saved_hz := Engine.get_physics_ticks_per_second()
-	Engine.set_physics_ticks_per_second(0)
-	paused = true
+	Engine.set_max_physics_steps_per_frame(1)
 	for frame in range(total + 1):
 		var in1 := _timeline.frame_for(1, frame)
 		var in2 := _timeline.frame_for(2, frame)
@@ -144,9 +134,9 @@ func _run_loop() -> void:
 		_record_state_snapshot(frame)
 		if _result.status == "fail" and _result.failure_reason != "none":
 			break
+		await physics_frame
 		await process_frame
-	paused = false
-	Engine.set_physics_ticks_per_second(saved_hz)
+	Engine.set_max_physics_steps_per_frame(8)
 
 
 func _record_history() -> void:
