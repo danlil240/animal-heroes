@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://visual/hero_visual.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://art/characters/riki_rabbit.svg" id="2_rabbit"]
 [ext_resource type="Texture2D" path="res://art/characters/foxy_fox.svg" id="3_fox"]
 [ext_resource type="Texture2D" path="res://art/effects/bubble_ring.svg" id="4_bubble"]
+[ext_resource type="Texture2D" path="res://art/effects/speed_streak.svg" id="5_streak"]
 
 [node name="HeroVisual" type="Node2D"]
 script = ExtResource("1_script")
@@ -25,6 +26,11 @@ texture = ExtResource("3_fox")
 position = Vector2(58, -25)
 scale = Vector2(0.25, 0.25)
 texture = ExtResource("4_bubble")
+
+[node name="SpeedStreak" type="Sprite2D" parent="Pose"]
+visible = false
+position = Vector2(0, -24)
+texture = ExtResource("5_streak")
 
 [node name="CelebrationBurst" type="Polygon2D" parent="."]
 visible = false

@@ -1,0 +1,20 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://world/spring_pad.gd" id="1_spring"]
+[ext_resource type="Texture2D" path="res://art/objects/spring_pad.svg" id="2_art"]
+
+[sub_resource type="RectangleShape2D" id="SpringShape"]
+size = Vector2(72, 28)
+
+[node name="SpringPad" type="Area2D" groups=["spring_pad"]]
+script = ExtResource("1_spring")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -4)
+shape = SubResource("SpringShape")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="SpringArt" type="Sprite2D" parent="Visual"]
+position = Vector2(0, -14)
+texture = ExtResource("2_art")

@@ -29,6 +29,7 @@ const REMOTE_KEY_ACTIONS := {
 
 const NET_SYNC_HZ: float = 20.0
 const _NET_SYNC_INTERVAL: float = 1.0 / NET_SYNC_HZ
+const SPRING_CAMERA_IMPULSE: float = 5.0
 
 @onready var rabbit = $Rabbit
 @onready var fox = $Fox
@@ -54,6 +55,7 @@ var _last_applied_world_event_sequence: int = 0
 func _ready() -> void:
 	_background = _find_background()
 	configure_local_role(local_role)
+	_connect_spring_feedback()
 	var fall_zone := get_node_or_null("FallRespawn")
 	if fall_zone != null:
 		fall_zone.body_entered.connect(_respawn_fallen_hero)
@@ -93,6 +95,7 @@ func configure_local_role(role: String) -> void:
 		rabbit_camera.make_current()
 	else:
 		fox_camera.make_current()
+	_configure_local_camera_feedback()
 	# The local hero always simulates. The partner keeps simulating too until
 	# network state actually arrives, so offline play, the local arena, and the
 	# desktop keyboard second player all still move under their own physics.
@@ -266,6 +269,30 @@ func _local_hero():
 
 func _remote_hero():
 	return fox if local_role == RABBIT_ROLE else rabbit
+
+
+func _local_camera() -> Camera2D:
+	return rabbit_camera if local_role == RABBIT_ROLE else fox_camera
+
+
+func _configure_local_camera_feedback() -> void:
+	var camera := _local_camera()
+	if camera.enabled and camera.has_method("set_follow_hero"):
+		camera.call("set_follow_hero", _local_hero())
+
+
+func _connect_spring_feedback() -> void:
+	for spring in get_tree().get_nodes_in_group("spring_pad"):
+		if spring.has_signal("launched") and not spring.is_connected("launched", _on_spring_launched):
+			spring.connect("launched", _on_spring_launched)
+
+
+func _on_spring_launched(peer_id: int) -> void:
+	if peer_id != int(_local_hero().get("peer_id")):
+		return
+	var camera := _local_camera()
+	if camera.enabled and camera.has_method("add_impulse"):
+		camera.call("add_impulse", SPRING_CAMERA_IMPULSE)
 
 
 func _respawn_fallen_hero(body: Node2D) -> void:
