@@ -60,6 +60,12 @@ PERMISSIONS
 EOF
 chmod +x "$SDK_DIR/build-tools/1.0.0/aapt"
 
+cat > "$SDK_DIR/build-tools/1.0.0/apksigner" <<'EOF'
+#!/usr/bin/env bash
+echo "apksigner"
+EOF
+chmod +x "$SDK_DIR/build-tools/1.0.0/apksigner"
+
 cat > "$TEMP_DIR/bin/sha256sum" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -314,8 +320,8 @@ for serial in host-serial client-serial; do
   done
 done
 
-assert_count "$(printf '%s\tshell am start -n org.danlil.animalheroes/org.godotengine.godot.GodotApp' host-serial)" 1 "$ADB_LOG"
-assert_count "$(printf '%s\tshell am start -n org.danlil.animalheroes/org.godotengine.godot.GodotApp' client-serial)" 1 "$ADB_LOG"
+assert_count "$(printf '%s\tshell am start -n org.danlil.animalheroes/com.godot.game.GodotAppLauncher' host-serial)" 1 "$ADB_LOG"
+assert_count "$(printf '%s\tshell am start -n org.danlil.animalheroes/com.godot.game.GodotAppLauncher' client-serial)" 1 "$ADB_LOG"
 assert_ordered_events \
   "sha256sum --check $ROOT_DIR/build/animal-heroes-debug.apk.sha256" \
   "adb host-serial install -r $ROOT_DIR/build/animal-heroes-debug.apk" \
@@ -331,8 +337,8 @@ assert_ordered_events \
   "adb client-serial shell dumpsys thermalservice" \
   "adb client-serial shell dumpsys battery" \
   "adb client-serial logcat -d" \
-  "adb host-serial shell am start -n org.danlil.animalheroes/org.godotengine.godot.GodotApp" \
-  "adb client-serial shell am start -n org.danlil.animalheroes/org.godotengine.godot.GodotApp" \
+  "adb host-serial shell am start -n org.danlil.animalheroes/com.godot.game.GodotAppLauncher" \
+  "adb client-serial shell am start -n org.danlil.animalheroes/com.godot.game.GodotAppLauncher" \
   "sleep 0" \
   "adb host-serial shell getprop ro.product.model" \
   "adb host-serial shell dumpsys gfxinfo org.danlil.animalheroes" \

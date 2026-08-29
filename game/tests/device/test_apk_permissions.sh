@@ -23,6 +23,14 @@ exit 0
 EOF
 chmod +x "$SDK_DIR/platform-tools/adb"
 
+# resolve_android_tools requires adb, aapt and apksigner to all be present
+# before it will report the audit's own result.
+cat > "$SDK_DIR/build-tools/1.0.0/apksigner" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+chmod +x "$SDK_DIR/build-tools/1.0.0/apksigner"
+
 cat > "$SDK_DIR/build-tools/1.0.0/aapt" <<'EOF'
 #!/usr/bin/env bash
 case "${FAKE_AAPT_MODE:-exact}" in

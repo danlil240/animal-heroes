@@ -37,6 +37,26 @@ if [[ "$HOST_SERIAL" == "$CLIENT_SERIAL" ]]; then
   exit 2
 fi
 
+# Wireless ADB devices are addressed by their mDNS transport id
+# (e.g. adb-R83W80KJX5N-zWC9jb._adb-tls-connect._tcp), not the hardware serial.
+# Map each hardware serial to its active adb transport id, falling back to the
+# serial itself when no wireless transport is found (USB or fake-adb test mode).
+resolve_adb_id() {
+  local serial="$1"
+  local adb_id
+  adb_id="$("$ADB_BIN" devices 2>/dev/null | awk -v s="$serial" '
+    $1 ~ s && $2 == "device" { print $1; exit }
+  ')"
+  if [[ -n "$adb_id" ]]; then
+    echo "$adb_id"
+  else
+    echo "$serial"
+  fi
+}
+
+HOST_ADB_ID="$(resolve_adb_id "$HOST_SERIAL")"
+CLIENT_ADB_ID="$(resolve_adb_id "$CLIENT_SERIAL")"
+
 if [[ ! -f "$APK" ]]; then
   echo "APK not found at $APK. Run scripts/build_android.sh first." >&2
   exit 2
@@ -74,54 +94,54 @@ printf '%s\n' "$SMOKE_DURATION_SECONDS" > "$RESULTS_DIR/run-duration-seconds.txt
 
 require_sm_t220() {
   local role="$1"
-  local serial="$2"
+  local adb_id="$2"
   local model
-  model="$("$ADB_BIN" -s "$serial" shell getprop ro.product.model)"
+  model="$("$ADB_BIN" -s "$adb_id" shell getprop ro.product.model)"
   if [[ "$model" != "SM-T220" ]]; then
-    echo "ERROR: $role device $serial must report exactly SM-T220; got: $model" >&2
+    echo "ERROR: $role device $adb_id must report exactly SM-T220; got: $model" >&2
     exit 2
   fi
 }
 
 capture_snapshot() {
   local role="$1"
-  local serial="$2"
+  local adb_id="$2"
   local timing="$3"
   local prefix="$RESULTS_DIR/${role}-${timing}"
 
-  "$ADB_BIN" -s "$serial" shell getprop ro.product.model > "${prefix}-model.txt"
-  "$ADB_BIN" -s "$serial" shell dumpsys gfxinfo org.danlil.animalheroes > "${prefix}-gfxinfo.txt"
-  "$ADB_BIN" -s "$serial" shell dumpsys meminfo org.danlil.animalheroes > "${prefix}-meminfo.txt"
-  "$ADB_BIN" -s "$serial" shell dumpsys thermalservice > "${prefix}-thermalservice.txt"
-  "$ADB_BIN" -s "$serial" shell dumpsys battery > "${prefix}-battery.txt"
-  "$ADB_BIN" -s "$serial" logcat -d > "${prefix}-logcat.txt"
+  "$ADB_BIN" -s "$adb_id" shell getprop ro.product.model > "${prefix}-model.txt"
+  "$ADB_BIN" -s "$adb_id" shell dumpsys gfxinfo org.danlil.animalheroes > "${prefix}-gfxinfo.txt"
+  "$ADB_BIN" -s "$adb_id" shell dumpsys meminfo org.danlil.animalheroes > "${prefix}-meminfo.txt"
+  "$ADB_BIN" -s "$adb_id" shell dumpsys thermalservice > "${prefix}-thermalservice.txt"
+  "$ADB_BIN" -s "$adb_id" shell dumpsys battery > "${prefix}-battery.txt"
+  "$ADB_BIN" -s "$adb_id" logcat -d > "${prefix}-logcat.txt"
 }
 
 echo "=== Device check ==="
-require_sm_t220 "host" "$HOST_SERIAL"
-require_sm_t220 "client" "$CLIENT_SERIAL"
+require_sm_t220 "host" "$HOST_ADB_ID"
+require_sm_t220 "client" "$CLIENT_ADB_ID"
 
 echo "=== Installing checksum-verified APK on both tablets ==="
-"$ADB_BIN" -s "$HOST_SERIAL" install -r "$APK"
-"$ADB_BIN" -s "$CLIENT_SERIAL" install -r "$APK"
+"$ADB_BIN" -s "$HOST_ADB_ID" install -r "$APK"
+"$ADB_BIN" -s "$CLIENT_ADB_ID" install -r "$APK"
 
 echo "=== Permission audit ==="
 bash "$ROOT_DIR/game/tests/device/apk_permissions.sh" "$APK"
 
 echo "=== Clearing logs ==="
-"$ADB_BIN" -s "$HOST_SERIAL" logcat -c
-"$ADB_BIN" -s "$CLIENT_SERIAL" logcat -c
+"$ADB_BIN" -s "$HOST_ADB_ID" logcat -c
+"$ADB_BIN" -s "$CLIENT_ADB_ID" logcat -c
 
 echo "=== Capturing before-run device evidence ==="
-capture_snapshot "host" "$HOST_SERIAL" "before"
-capture_snapshot "client" "$CLIENT_SERIAL" "before"
+capture_snapshot "host" "$HOST_ADB_ID" "before"
+capture_snapshot "client" "$CLIENT_ADB_ID" "before"
 
 echo "=== Launching host ==="
-"$ADB_BIN" -s "$HOST_SERIAL" shell am start -n org.danlil.animalheroes/org.godotengine.godot.GodotApp
+"$ADB_BIN" -s "$HOST_ADB_ID" shell am start -n org.danlil.animalheroes/com.godot.game.GodotAppLauncher
 
 echo "=== Launching client ==="
 sleep 3
-"$ADB_BIN" -s "$CLIENT_SERIAL" shell am start -n org.danlil.animalheroes/org.godotengine.godot.GodotApp
+"$ADB_BIN" -s "$CLIENT_ADB_ID" shell am start -n org.danlil.animalheroes/com.godot.game.GodotAppLauncher
 
 if [[ "$SMOKE_DURATION_SECONDS" == "$DEFAULT_SMOKE_DURATION_SECONDS" ]]; then
   echo "=== Operator-driven 10-minute gameplay interval (600 seconds) ==="
@@ -133,8 +153,8 @@ echo "Launching the app processes does not automatically perform gameplay."
 sleep "$SMOKE_DURATION_SECONDS"
 
 echo "=== Capturing after-run device evidence ==="
-capture_snapshot "host" "$HOST_SERIAL" "after"
-capture_snapshot "client" "$CLIENT_SERIAL" "after"
+capture_snapshot "host" "$HOST_ADB_ID" "after"
+capture_snapshot "client" "$CLIENT_ADB_ID" "after"
 
 echo "=== Done. Results in $RESULTS_DIR/ ==="
 echo "Review before/after frame-time, memory, thermal, battery, and logcat evidence."
