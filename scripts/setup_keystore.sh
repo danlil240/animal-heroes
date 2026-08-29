@@ -168,7 +168,8 @@ finish() {
 
 TOTAL_STAGES=6
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIG_PATH="$ROOT_DIR/release/deploy_config.json"
 KEYSTORE_PATH="${KEYSTORE_PATH:-$HOME/keystores/animal-heroes-release.jks}"
 KEYSTORE_ALIAS="${KEYSTORE_ALIAS:-animalheroes}"
@@ -181,9 +182,13 @@ say "Checking the tools the keystore setup needs."
 MISSING=()
 command -v keytool      >/dev/null 2>&1 || MISSING+=("keytool (openjdk-17-jre-headless)")
 command -v secret-tool  >/dev/null 2>&1 || MISSING+=("secret-tool (libsecret-tools)")
-command -v apksigner    >/dev/null 2>&1 || MISSING+=("apksigner (Android SDK build-tools)")
 command -v openssl      >/dev/null 2>&1 || MISSING+=("openssl")
 command -v python3      >/dev/null 2>&1 || MISSING+=("python3")
+# apksigner ships with Android SDK build-tools and is rarely on PATH; resolve
+# it the same way build_android.sh and pair_tablets.sh do.
+if ! source "$SCRIPT_DIR/android_tools.sh" || ! resolve_android_tools 2>/dev/null; then
+  MISSING+=("apksigner (Android SDK build-tools)")
+fi
 if (( ${#MISSING[@]} )); then
   warn "Missing required tools:"
   for m in "${MISSING[@]}"; do note "  - $m"; done
@@ -242,7 +247,8 @@ ask_secret KEYSTORE_PASSWORD "Keystore password:"
 [[ -n "$KEYSTORE_PASSWORD" ]] || { warn "Empty password — aborting."; exit 1; }
 
 printf '%s\n' "$KEYSTORE_PASSWORD" | \
-  secret-tool store application animal-heroes-deploy key release-keystore-password
+  secret-tool store --label='Animal Heroes release keystore password' \
+    application animal-heroes-deploy key release-keystore-password
 
 LOOKED_UP="$(secret-tool lookup application animal-heroes-deploy key release-keystore-password 2>/dev/null || true)"
 if [[ -z "$LOOKED_UP" ]]; then

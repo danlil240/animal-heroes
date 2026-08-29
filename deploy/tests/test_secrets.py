@@ -60,6 +60,12 @@ class GnomeKeyringSecretStoreTests(unittest.TestCase):
         self.assertIn("the-secret", str(captured_stdin[0]))
         self.assertEqual(captured_args[0][0], "store")
         self.assertEqual(captured_args[1][0], "lookup")
+        # secret-tool store requires a --label argument; without it the call
+        # fails with "must specify a label for the new item".
+        self.assertTrue(
+            any(arg.startswith("--label=") for arg in captured_args[0]),
+            f"secret-tool store must include --label, got: {captured_args[0]}",
+        )
 
     def test_lookup_returns_none_when_absent(self) -> None:
         runner = fake_runner(self)

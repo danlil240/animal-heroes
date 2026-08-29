@@ -50,9 +50,10 @@ class GnomeKeyringSecretStore:
     def store(self, key: str, value: bytes) -> None:
         attrs = {**_KEYRING_ATTRIBUTES, "key": key}
         attr_args = tuple(arg for pair in attrs.items() for arg in (pair[0], pair[1]))
+        label = f"animal-heroes-deploy: {key}"
         result = self._runner.run(
             Tool.SECRET_TOOL,
-            ("store", *attr_args),
+            ("store", f"--label={label}", *attr_args),
             stdin=value.rstrip(b"\n") + b"\n",
             secret_values=(value.decode("utf-8", errors="replace"),),
         )
