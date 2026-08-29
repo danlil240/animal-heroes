@@ -10,7 +10,27 @@ func _run() -> void:
 		return
 	if not await _test_star_race_hud():
 		return
+	if not await _test_treasure_dash_hud():
+		return
 	quit(0)
+
+
+func _test_treasure_dash_hud() -> bool:
+	var scene: PackedScene = load("res://ui/treasure_dash_hud.tscn")
+	if scene == null:
+		return _fail_bool("treasure dash HUD scene must load")
+	var hud = scene.instantiate()
+	root.add_child(hud)
+	await process_frame
+	hud.render(180.0, 12, 7)
+	if hud.get_node("Timer").text != "3:00":
+		return _fail_bool("treasure dash HUD timer must format M:SS, got %s" % hud.get_node("Timer").text)
+	if hud.get_node("HostScore").text != "12":
+		return _fail_bool("treasure dash HUD must show host score, got %s" % hud.get_node("HostScore").text)
+	if hud.get_node("GuestScore").text != "7":
+		return _fail_bool("treasure dash HUD must show guest score, got %s" % hud.get_node("GuestScore").text)
+	hud.queue_free()
+	return true
 
 
 func _test_star_race_hud() -> bool:
