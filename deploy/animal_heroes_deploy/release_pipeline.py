@@ -1,4 +1,4 @@
-"""Candidate release staging and publication pipeline."""
+"""Candidate and stable release staging and publication pipeline."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from deploy.animal_heroes_deploy.apk import ApkInspector
+from deploy.animal_heroes_deploy.evidence import EvidenceBundle, PromotionGate
 from deploy.animal_heroes_deploy.audit import AuditEvent, AuditLog
 from deploy.animal_heroes_deploy.catalog import Catalog
 from deploy.animal_heroes_deploy.config import DeployConfig
@@ -271,6 +272,83 @@ class ReleasePipeline:
         worktree_path = Path(data.get("worktree_path", ""))
         if worktree_path.exists():
             self._git_ops.remove_worktree(worktree_path)
+
+    def stage_stable(self, request: "StableRequest") -> "StagedStableCapability":
+        PromotionGate().validate(request.evidence)
+        candidate = self._catalog.get(request.candidate_release_id)
+        if candidate is None:
+            raise StageRejected("candidate release not found")
+        if candidate.channel != ReleaseChannel.CANDIDATE:
+            raise StageRejected("source must be a candidate release")
+        staged = self.stage_candidate(CandidateRequest(
+            version_name=request.version_name,
+            release_notes=f"Stable promotion of {candidate.version_name}",
+            activate=False,
+            source_commit=candidate.source_commit,
+            rollback_of=None,
+        ))
+        capability = StagedStableCapability(
+            staged_id=staged.operation_id,
+            apk_sha256=staged.apk_sha256,
+            host_hardware_id=self._config.devices[0].hardware_id,
+            client_hardware_id=self._config.devices[1].hardware_id,
+            version_code=staged.version_code,
+            version_name=staged.version_name,
+            release_commit=staged.release_commit,
+            staged_apk_path=staged.staged_apk_path,
+            tag=staged.tag,
+            worktree_path=staged.worktree_path,
+        )
+        return capability
+
+    def publish_stable_after_smoke(self, capability: "StagedStableCapability", smoke_evidence: "StagedSmokeEvidence") -> ReleaseRecord:
+        if capability.staged_id != smoke_evidence.staged_id:
+            raise ConfirmRejected("smoke evidence does not match staged capability")
+        if capability.apk_sha256 != smoke_evidence.apk_sha256:
+            raise ConfirmRejected("smoke evidence APK hash mismatch")
+        if capability.host_hardware_id != smoke_evidence.host_hardware_id:
+            raise ConfirmRejected("smoke evidence host hardware mismatch")
+        if capability.client_hardware_id != smoke_evidence.client_hardware_id:
+            raise ConfirmRejected("smoke evidence client hardware mismatch")
+        if capability.version_code != smoke_evidence.host_version_code or capability.version_code != smoke_evidence.client_version_code:
+            raise ConfirmRejected("smoke evidence version mismatch")
+        entry = self._journal.read(capability.staged_id)
+        data = dict(entry.data)
+        data["channel"] = "stable"
+        record = self.confirm_publish(capability.staged_id)
+        return record
+
+
+@dataclass(frozen=True)
+class StableRequest:
+    candidate_release_id: str
+    version_name: str
+    evidence: EvidenceBundle
+
+
+@dataclass(frozen=True)
+class StagedSmokeEvidence:
+    staged_id: str
+    apk_sha256: str
+    host_hardware_id: str
+    client_hardware_id: str
+    host_version_code: int
+    client_version_code: int
+    operator: str
+
+
+@dataclass(frozen=True)
+class StagedStableCapability:
+    staged_id: str
+    apk_sha256: str
+    host_hardware_id: str
+    client_hardware_id: str
+    version_code: int
+    version_name: str
+    release_commit: str
+    staged_apk_path: Path
+    tag: str
+    worktree_path: Path
 
 
 def _compute_sha256(path: Path) -> str:
