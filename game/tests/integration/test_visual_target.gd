@@ -52,6 +52,8 @@ func _run() -> void:
 		return
 	if not await _test_boss_overlay_presence():
 		return
+	if not await _test_competition_hud_presence():
+		return
 	if not _test_complete_arena_composition():
 		return
 	if not await _test_ground_art_covers_collider():
@@ -264,6 +266,28 @@ func _test_boss_overlay_presence() -> bool:
 		level.queue_free()
 		return _fail_bool("BossStatusOverlay must expose render()")
 	level.queue_free()
+	return true
+
+
+func _test_competition_hud_presence() -> bool:
+	var cases := {
+		"res://levels/bubble_bounce_arena.tscn": "BubbleBounceHud",
+		"res://levels/star_race_arena.tscn": "StarRaceHud",
+		"res://levels/treasure_dash_arena.tscn": "TreasureDashHud",
+	}
+	for level_path in cases:
+		var hud_name: String = cases[level_path]
+		var level = load(level_path).instantiate()
+		root.add_child(level)
+		await process_frame
+		var hud = level.get_node_or_null("HUD/%s" % hud_name)
+		if hud == null:
+			level.queue_free()
+			return _fail_bool("%s must compose %s" % [level_path.get_file(), hud_name])
+		if not hud.has_method("render"):
+			level.queue_free()
+			return _fail_bool("%s must expose render()" % hud_name)
+		level.queue_free()
 	return true
 
 

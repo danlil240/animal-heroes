@@ -16,6 +16,7 @@ const REFILL_AMOUNT: int = 3
 const MAX_AMMO: int = 5
 
 @onready var projectiles_layer = $Projectiles
+@onready var _hud = $HUD/BubbleBounceHud
 
 var bounce_mode: RefCounted = null
 
@@ -42,6 +43,13 @@ func _step_level(delta: float) -> void:
 	bounce_mode.tick(delta)
 	_update_facing()
 	_update_bubbles(delta)
+	var local_peer_id := int(_local_hero().get_meta("peer_id", 0))
+	_hud.render(
+		bounce_mode.time_remaining(),
+		bounce_mode.score(HOST_PEER_ID),
+		bounce_mode.score(GUEST_PEER_ID),
+		int(_ammo.get(local_peer_id, 0)),
+	)
 
 
 func _physics_process(delta: float) -> void:

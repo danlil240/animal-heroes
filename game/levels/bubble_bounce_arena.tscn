@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://levels/bubble_bounce_arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://visual/hero_visual.tscn" id="9_hero_visual"]
 [ext_resource type="PackedScene" path="res://visual/wall_visual.tscn" id="10_wall_visual"]
 [ext_resource type="PackedScene" path="res://visual/refill_zone_visual.tscn" id="11_refill_visual"]
+[ext_resource type="PackedScene" path="res://ui/bubble_bounce_hud.tscn" id="12_bubble_hud"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(1800, 80)
@@ -172,6 +173,8 @@ limit_bottom = 800
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="TouchControls" parent="HUD" instance=ExtResource("5_touch")]
+
+[node name="BubbleBounceHud" parent="HUD" instance=ExtResource("12_bubble_hud")]
 
 [node name="PartnerIndicator" type="Control" parent="HUD"]
 layout_mode = 0
