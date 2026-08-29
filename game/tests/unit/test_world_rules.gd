@@ -25,6 +25,8 @@ func _init() -> void:
 	_test_action_resolver_rejects_ineligible_and_distant_targets()
 	_test_action_resolver_uses_stable_tie_break()
 	_test_interactable_character_eligibility()
+	_test_beetle_actor_patrol_contact_and_stomp()
+	_test_seed_actor_telegraphs_hops_and_accepts_bubble()
 	quit(0)
 
 
@@ -336,6 +338,79 @@ func _test_interactable_character_eligibility() -> void:
 	interactable.required_character = "rabbit"
 	if not interactable.eligible_for(rabbit) or interactable.eligible_for(fox):
 		_fail("rabbit-only interaction must accept rabbit and reject fox")
+
+
+## Catches the beetle walking beyond its safe platform, contact doing nothing,
+## or one stomp awarding multiple defeat transitions.
+func _test_beetle_actor_patrol_contact_and_stomp() -> void:
+	var scene: PackedScene = load("res://world/beetle_enemy.tscn")
+	if scene == null:
+		_fail("beetle enemy scene must load")
+		return
+	var beetle = scene.instantiate()
+	beetle.patrol_range = 20.0
+	beetle.patrol_speed = 100.0
+	root.add_child(beetle)
+	beetle.host_step(0.3)
+	if absf(beetle.position.x) > 20.0:
+		_fail("beetle patrol must stay inside its configured range")
+		return
+	var player = _make_player_body(1)
+	var hearts_before: int = player.snapshot().hearts
+	var contact_result: bool = beetle.try_contact(player)
+	if not contact_result or player.hearts != hearts_before - 1:
+		_fail("beetle contact must damage a vulnerable hero: result=%s before=%d after=%d locked=%s cooldown=%.3f spawn=%.3f" % [
+			contact_result,
+			hearts_before,
+			player.hearts,
+			player.controls_locked(),
+			player.snapshot().damage_cooldown_remaining,
+			player.snapshot().spawn_protection_remaining,
+		])
+		return
+	if player.velocity.y >= 0.0:
+		_fail("beetle contact must knock the hero upward")
+		return
+	var emissions: Array[int] = []
+	beetle.defeated.connect(func(_enemy_id: String, peer_id: int) -> void: emissions.append(peer_id))
+	if not beetle.try_stomp(beetle.global_position + Vector2(0, -24), Vector2(0, 140), 1):
+		_fail("descending stomp from above must defeat beetle")
+		return
+	if beetle.try_stomp(beetle.global_position + Vector2(0, -24), Vector2(0, 140), 1):
+		_fail("defeated beetle must reject repeated stomps")
+		return
+	if emissions != [1]:
+		_fail("beetle defeat must emit exactly once")
+
+
+## Catches the seed jumping without warning or bubbles failing to defeat it.
+func _test_seed_actor_telegraphs_hops_and_accepts_bubble() -> void:
+	var scene: PackedScene = load("res://world/seed_enemy.tscn")
+	if scene == null:
+		_fail("seed enemy scene must load")
+		return
+	var seed = scene.instantiate()
+	seed.configure("seed-test", "seed")
+	root.add_child(seed)
+	seed.host_step(seed.wait_duration)
+	if seed.motion_state != seed.TELEGRAPH:
+		_fail("seed must visibly telegraph before hopping: state=%s elapsed_wait=%.3f configured_wait=%.3f" % [
+			seed.motion_state, seed.get("_state_elapsed"), seed.wait_duration,
+		])
+		return
+	seed.host_step(seed.telegraph_duration * 0.5)
+	if seed.motion_state != seed.TELEGRAPH:
+		_fail("seed telegraph must remain visible for its full duration")
+		return
+	seed.host_step(seed.telegraph_duration * 0.5)
+	if seed.motion_state != seed.HOP or seed.velocity.y >= 0.0:
+		_fail("seed hop must begin with upward velocity after telegraph")
+		return
+	if not seed.try_bubble(2) or seed.motion_state != seed.DEFEATED:
+		_fail("one bubble hit must defeat the hopping seed")
+		return
+	if seed.try_bubble(2):
+		_fail("defeated seed must reject repeated bubble hits")
 
 
 func _make_interaction(id: String, priority: int, at_position: Vector2) -> TestInteraction:
