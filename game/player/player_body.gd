@@ -8,6 +8,8 @@ const PlayerStateScript = preload("res://player/player_state.gd")
 const COYOTE_TIME: float = 0.10
 const JUMP_BUFFER_TIME: float = 0.12
 const DAMAGE_COOLDOWN: float = 0.75
+const RESPAWN_DELAY: float = 1.0
+const SPAWN_PROTECTION: float = 1.25
 const TIMER_EPSILON: float = 0.000001
 
 @export var profile: PlayerProfileScript
@@ -28,6 +30,9 @@ var _action_buffered: bool = false
 var _jump_buffer_remaining: float = 0.0
 var _coyote_remaining: float = 0.0
 var _damage_cooldown_remaining: float = 0.0
+var _respawn_remaining: float = 0.0
+var _spawn_protection_remaining: float = 0.0
+var _pending_respawn_position: Vector2 = Vector2.ZERO
 var _last_damage_source_peer_id: int = 0
 var _initialized: bool = false
 
@@ -45,6 +50,8 @@ func _physics_process(delta: float) -> void:
 
 func apply_input(frame: PlayerInputScript.InputFrame) -> void:
 	_ensure_initialized()
+	if controls_locked():
+		return
 	_input_axis = clampf(frame.axis, -1.0, 1.0)
 	if absf(_input_axis) > 0.01:
 		facing_direction = signf(_input_axis)
@@ -59,6 +66,13 @@ func apply_input(frame: PlayerInputScript.InputFrame) -> void:
 func physics_step(delta: float) -> void:
 	_ensure_initialized()
 	var step := maxf(delta, 0.0)
+	_spawn_protection_remaining = _count_down(_spawn_protection_remaining, step)
+	if _respawn_remaining > 0.0:
+		_respawn_remaining = _count_down(_respawn_remaining, step)
+		velocity = Vector2.ZERO
+		if _respawn_remaining <= 0.0:
+			_complete_delayed_respawn()
+		return
 	var was_on_floor := is_on_floor()
 	_damage_cooldown_remaining = _count_down(_damage_cooldown_remaining, step)
 	if was_on_floor:
@@ -76,15 +90,34 @@ func physics_step(delta: float) -> void:
 
 
 func take_hit(source_peer_id: int) -> bool:
+	return take_world_hit(source_peer_id, Vector2.ZERO)
+
+
+func take_world_hit(source_peer_id: int, impulse: Vector2) -> bool:
 	_ensure_initialized()
-	if _damage_cooldown_remaining > TIMER_EPSILON:
+	if controls_locked() or _spawn_protection_remaining > TIMER_EPSILON or _damage_cooldown_remaining > TIMER_EPSILON:
 		return false
 	_damage_cooldown_remaining = DAMAGE_COOLDOWN
 	_last_damage_source_peer_id = source_peer_id
 	hearts -= 1
+	velocity = impulse
 	if hearts <= 0:
-		respawn(checkpoint_position)
+		begin_respawn(checkpoint_position)
 	return true
+
+
+func begin_respawn(at_position: Vector2) -> void:
+	_ensure_initialized()
+	_pending_respawn_position = at_position
+	_respawn_remaining = RESPAWN_DELAY
+	hearts = 0
+	velocity = Vector2.ZERO
+	_clear_transient_input()
+	_damage_cooldown_remaining = 0.0
+
+
+func controls_locked() -> bool:
+	return _respawn_remaining > TIMER_EPSILON
 
 
 func respawn(at_position: Vector2) -> void:
@@ -93,12 +126,7 @@ func respawn(at_position: Vector2) -> void:
 	global_position = at_position
 	velocity = Vector2.ZERO
 	hearts = profile.max_hearts
-	_input_axis = 0.0
-	_jump_pressed = false
-	_action_pressed = false
-	_action_buffered = false
-	_jump_buffer_remaining = 0.0
-	_coyote_remaining = 0.0
+	_clear_transient_input()
 	_damage_cooldown_remaining = 0.0
 	_last_damage_source_peer_id = 0
 
@@ -139,6 +167,8 @@ func snapshot() -> PlayerStateScript:
 	state.jump_buffer_remaining = _jump_buffer_remaining
 	state.coyote_remaining = _coyote_remaining
 	state.damage_cooldown_remaining = _damage_cooldown_remaining
+	state.respawn_remaining = _respawn_remaining
+	state.spawn_protection_remaining = _spawn_protection_remaining
 	state.checkpoint_position = checkpoint_position
 	state.last_damage_source_peer_id = _last_damage_source_peer_id
 	return state
@@ -154,6 +184,20 @@ func _try_buffered_jump(can_jump: bool) -> void:
 func _count_down(remaining: float, delta: float) -> float:
 	var result := maxf(remaining - delta, 0.0)
 	return 0.0 if result <= TIMER_EPSILON else result
+
+
+func _complete_delayed_respawn() -> void:
+	respawn(_pending_respawn_position)
+	_spawn_protection_remaining = SPAWN_PROTECTION
+
+
+func _clear_transient_input() -> void:
+	_input_axis = 0.0
+	_jump_pressed = false
+	_action_pressed = false
+	_action_buffered = false
+	_jump_buffer_remaining = 0.0
+	_coyote_remaining = 0.0
 
 
 func _ensure_initialized() -> void:

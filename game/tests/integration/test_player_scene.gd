@@ -151,8 +151,11 @@ func _test_jump_buffer_boundaries(profile: Resource) -> bool:
 
 func _test_damage_and_respawn(profile: Resource) -> bool:
 	var cooldown = _make_player(profile, Vector2(400.0, 80.0))
-	if not cooldown.take_hit(11) or cooldown.snapshot().hearts != 2:
-		_fail("an accepted hit must remove one heart")
+	if not cooldown.take_world_hit(11, Vector2(-120.0, -180.0)) or cooldown.snapshot().hearts != 2:
+		_fail("an accepted world hit must remove one heart")
+		return false
+	if cooldown.velocity != Vector2(-120.0, -180.0):
+		_fail("an accepted world hit must apply its knockback impulse")
 		return false
 	cooldown.physics_step(0.749)
 	if cooldown.take_hit(12) or cooldown.snapshot().hearts != 2:
@@ -179,18 +182,32 @@ func _test_damage_and_respawn(profile: Resource) -> bool:
 	respawning.physics_step(0.75)
 	respawning.take_hit(33)
 	var state = respawning.snapshot()
-	if state.position != Vector2(75.0, 166.0) or state.hearts != 3:
-		_fail("a lethal hit must restore full hearts at the checkpoint")
+	if state.hearts != 0 or not respawning.controls_locked():
+		_fail("a lethal hit must lock control during the recovery delay")
+		return false
+	respawning.apply_input(_frame(1.0, true, true))
+	respawning.physics_step(0.999)
+	if not respawning.controls_locked() or respawning.snapshot().hearts != 0:
+		_fail("recovery must remain pending just inside the one-second delay")
+		return false
+	respawning.physics_step(0.001)
+	state = respawning.snapshot()
+	if state.position != Vector2(75.0, 166.0) or state.hearts != 3 or respawning.controls_locked():
+		_fail("one-second recovery must restore full hearts at the checkpoint")
 		return false
 	if state.velocity != Vector2.ZERO or state.jump_buffer_remaining != 0.0 or state.action_buffered or state.damage_cooldown_remaining != 0.0:
 		_fail("respawn must clear stale movement, input, action, and damage state")
 		return false
-	respawning.physics_step(0.0)
-	if respawning.velocity.y < 0.0:
-		_fail("respawn must not auto-jump from an earlier jump press")
+	if respawning.take_hit(34) or respawning.snapshot().hearts != 3:
+		_fail("spawn protection must reject immediate checkpoint damage")
 		return false
-	if not respawning.take_hit(34) or respawning.snapshot().hearts != 2:
-		_fail("respawn must clear the old damage cooldown")
+	respawning.physics_step(1.249)
+	if respawning.take_hit(35):
+		_fail("spawn protection must remain active just inside 1.25 seconds")
+		return false
+	respawning.physics_step(0.001)
+	if not respawning.take_hit(36) or respawning.snapshot().hearts != 2:
+		_fail("damage must resume at the spawn-protection boundary")
 		return false
 	return true
 

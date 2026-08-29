@@ -46,6 +46,8 @@ func _run() -> void:
 		return
 	if not _test_indicator_presentation():
 		return
+	if not _test_gameplay_hud_presentation():
+		return
 	if not _test_complete_arena_composition():
 		return
 	if not await _test_ground_art_covers_collider():
@@ -179,6 +181,34 @@ func _test_indicator_presentation() -> bool:
 	if arrow.color == Color(1.0, 0.35, 0.08, 1.0):
 		return _fail_bool("partner indicator must use the shared gold reward language")
 	arena.queue_free()
+	return true
+
+
+## Catches the shared score or either player's health disappearing from one
+## tablet, and catches bubble ammo allocating beyond its five visible slots.
+func _test_gameplay_hud_presentation() -> bool:
+	var hud_scene: PackedScene = load("res://ui/gameplay_hud.tscn")
+	if hud_scene == null:
+		return _fail_bool("gameplay HUD scene must load")
+	var hud = hud_scene.instantiate()
+	root.add_child(hud)
+	hud.render(135, 2, 3, 4)
+	if hud.get_node("Top/Score").text != "135":
+		return _fail_bool("HUD must display authoritative team score")
+	if hud.get_node("Top/RabbitHearts").text != "♥♥♡":
+		return _fail_bool("HUD must display Riki's current hearts")
+	if hud.get_node("Top/FoxHearts").text != "♥♥♥♡":
+		return _fail_bool("HUD must retain Foxy's fourth heart slot")
+	var ammo_marks: Array[Node] = hud.get_node("Ammo/Marks").get_children()
+	if ammo_marks.size() != 5:
+		return _fail_bool("HUD must precreate exactly five bubble ammo marks")
+	for index in ammo_marks.size():
+		if ammo_marks[index].visible != (index < 4):
+			return _fail_bool("HUD bubble marks must match local ammunition")
+	hud.show_context("push")
+	if not hud.get_node("Context").visible or hud.get_node("Context/Icon").text != "↔":
+		return _fail_bool("HUD must show the push context without moving controls")
+	hud.queue_free()
 	return true
 
 

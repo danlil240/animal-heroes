@@ -15,6 +15,8 @@ var action_buffered: bool = false
 var jump_buffer_remaining: float = 0.0
 var coyote_remaining: float = 0.0
 var damage_cooldown_remaining: float = 0.0
+var respawn_remaining: float = 0.0
+var spawn_protection_remaining: float = 0.0
 var checkpoint_position: Vector2 = Vector2.ZERO
 var last_damage_source_peer_id: int = 0
 
@@ -35,6 +37,8 @@ func to_dictionary() -> Dictionary:
 		"jump_buffer_remaining": jump_buffer_remaining,
 		"coyote_remaining": coyote_remaining,
 		"damage_cooldown_remaining": damage_cooldown_remaining,
+		"respawn_remaining": respawn_remaining,
+		"spawn_protection_remaining": spawn_protection_remaining,
 		"checkpoint_position": checkpoint_position,
 		"last_damage_source_peer_id": last_damage_source_peer_id,
 	}
