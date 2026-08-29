@@ -99,15 +99,36 @@ func _disable_auto_processing() -> void:
 	if _level != null:
 		_level.set_physics_process(false)
 		_level.set_process(false)
+		for child in _level.get_children():
+			_disable_subtree_processing(child)
 	if _rabbit != null:
 		_rabbit.set_physics_process(false)
 	if _fox != null:
 		_fox.set_physics_process(false)
+	# Mark heroes/level PROCESS_MODE_ALWAYS so manual physics_step / move_and_slide
+	# still work when the tree is paused for deterministic rendering.
+	if _level != null:
+		_level.process_mode = Node.PROCESS_MODE_ALWAYS
+	if _rabbit != null:
+		_rabbit.process_mode = Node.PROCESS_MODE_ALWAYS
+	if _fox != null:
+		_fox.process_mode = Node.PROCESS_MODE_ALWAYS
+
+
+func _disable_subtree_processing(node: Node) -> void:
+	if node is Node:
+		(node as Node).set_process(false)
+		(node as Node).set_physics_process(false)
+	for child in node.get_children():
+		_disable_subtree_processing(child)
 
 
 func _run_loop() -> void:
 	var delta := 1.0 / float(PHYSICS_HZ)
 	var total := _timeline.total_frames()
+	var saved_hz := Engine.get_physics_ticks_per_second()
+	Engine.set_physics_ticks_per_second(0)
+	paused = true
 	for frame in range(total + 1):
 		var in1 := _timeline.frame_for(1, frame)
 		var in2 := _timeline.frame_for(2, frame)
@@ -124,6 +145,8 @@ func _run_loop() -> void:
 		if _result.status == "fail" and _result.failure_reason != "none":
 			break
 		await process_frame
+	paused = false
+	Engine.set_physics_ticks_per_second(saved_hz)
 
 
 func _record_history() -> void:
