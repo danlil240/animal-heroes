@@ -20,7 +20,7 @@ func _init() -> void:
 	_test_invalid_remote_activation_rejected()
 	_test_team_score_rejects_duplicate_events()
 	_test_team_score_snapshot_round_trip()
-	_test_bubble_inventory_is_bounded_and_consumable()
+	_test_bubble_inventory_tracks_powered_spread_shots()
 	_test_action_resolver_prefers_high_priority_target()
 	_test_action_resolver_rejects_ineligible_and_distant_targets()
 	_test_action_resolver_uses_stable_tie_break()
@@ -249,34 +249,57 @@ func _test_team_score_snapshot_round_trip() -> void:
 
 
 ## Catches a bubble flower granting unbounded shots or empty ammo still firing.
-func _test_bubble_inventory_is_bounded_and_consumable() -> void:
+func _test_bubble_inventory_tracks_powered_spread_shots() -> void:
 	var inventory_script = load("res://player/bubble_inventory.gd")
 	if inventory_script == null:
 		_fail("bubble inventory rules must exist")
 		return
 	var inventory = inventory_script.new()
-	if inventory.grant(1) != 5 or inventory.remaining(1) != 5:
-		_fail("default bubble flower must grant five shots")
+	if inventory.kind(1) != "basic" or inventory.remaining(1) != 0:
+		_fail("heroes must start with unlimited basic fire")
 		return
-	if inventory.grant(1, 50) != 5:
-		_fail("bubble inventory must clamp to five shots")
+	if inventory.grant_spread(1) != 10 or inventory.kind(1) != "spread":
+		_fail("bubble flower must grant ten spread shots")
 		return
-	for index in 5:
-		if not inventory.consume(1):
-			_fail("granted bubble shot %d must be consumable" % index)
+	if inventory.grant_spread(1, 50) != 10:
+		_fail("spread charges must clamp at ten")
+		return
+	for index in 10:
+		if not inventory.consume_spread(1):
+			_fail("spread shot %d must be consumable" % index)
 			return
-	if inventory.consume(1) or inventory.remaining(1) != 0:
-		_fail("empty bubble inventory must reject consumption")
+	if inventory.consume_spread(1) or inventory.kind(1) != "basic" or inventory.remaining(1) != 0:
+		_fail("exhausted spread charges must return to unlimited basic fire")
 		return
-	if inventory.grant(0) != 0 or inventory.remaining(0) != 0:
-		_fail("invalid peer ids must not receive bubble ammunition")
+	if inventory.grant(1) != 5 or inventory.consume(1) == false or inventory.remaining(1) != 4:
+		_fail("legacy grant and consume wrappers must retain five-charge caller behavior")
 		return
 	var restored = inventory_script.new()
-	if not restored.restore({1: 4, 2: 2}):
+	if not restored.restore({1: {"kind": "spread", "remaining": 4}, 2: {"kind": "basic", "remaining": 0}}):
 		_fail("valid bubble inventory snapshot must restore")
 		return
-	if restored.remaining(1) != 4 or restored.remaining(2) != 2:
-		_fail("bubble inventory snapshot must preserve each peer count")
+	if restored.kind(1) != "spread" or restored.remaining(1) != 4 or restored.kind(2) != "basic":
+		_fail("bubble inventory snapshot must preserve powered kind and count")
+		return
+	var json_restored = inventory_script.new()
+	if not json_restored.restore({"1": {"kind": "spread", "remaining": 2}}) or json_restored.kind(1) != "spread" or json_restored.remaining(1) != 2:
+		_fail("inventory restore must accept numeric peer keys after JSON round-trip")
+		return
+	var before: Dictionary = restored.snapshot()
+	if restored.restore({1: {"kind": "laser", "remaining": 1}}):
+		_fail("unknown powered inventory kinds must be rejected")
+		return
+	if restored.restore({3: {"kind": "spread", "remaining": 1}}):
+		_fail("inventory restore must reject peers outside the two heroes")
+		return
+	if restored.restore({1: {"kind": "spread", "remaining": 11}}):
+		_fail("inventory restore must reject counts above ten")
+		return
+	if restored.restore({1: {"kind": "spread", "remaining": 1}, "1": {"kind": "spread", "remaining": 2}}):
+		_fail("inventory restore must reject duplicate normalized peer entries")
+		return
+	if restored.snapshot() != before:
+		_fail("failed inventory restore must leave existing charges unchanged")
 
 
 ## Catches bubble firing while a nearby teamwork object should own the action.
@@ -436,18 +459,28 @@ func _test_bubble_projectile_launch_move_hit_and_expire() -> void:
 		return
 	var bubble = scene.instantiate()
 	root.add_child(bubble)
-	if bubble.launch(0, Vector2.ZERO, 1.0, 1):
+	if bubble.launch(0, Vector2.ZERO, Vector2(360.0, 0.0), 1):
 		_fail("bubble must reject invalid owner peer id")
 		return
-	if bubble.launch(1, Vector2.ZERO, 0.0, 1):
-		_fail("bubble must reject zero direction")
+	if bubble.launch(1, Vector2.ZERO, Vector2.ZERO, 1):
+		_fail("bubble must reject zero velocity")
 		return
-	if not bubble.launch(1, Vector2(10, 20), 1.0, 7):
+	if bubble.launch(1, Vector2.ZERO, 0.0001, 1):
+		_fail("legacy scalar launch must reject a near-zero direction")
+		return
+	if not bubble.launch(1, Vector2(10, 20), Vector2(360.0, -40.0), 7, "spread", -1):
 		_fail("valid bubble launch must become active")
 		return
+	if bubble.projectile_kind != "spread" or bubble.fan_index != -1 or bubble.projectile_id != "bubble-7--1":
+		_fail("spread member must preserve its distinct kind and fan identity")
+		return
+	var spread_visual := bubble.get_node("Visual") as Sprite2D
+	if spread_visual.scale != Vector2(0.52, 0.52) or spread_visual.modulate != Color("9ce7ff"):
+		_fail("spread members must have a distinct tint and scale")
+		return
 	bubble.host_step(0.5)
-	if bubble.position != Vector2(190, 20):
-		_fail("bubble must move 180 pixels in half a second at fixed speed")
+	if bubble.position != Vector2(190, 0):
+		_fail("bubble must move from its supplied velocity")
 		return
 	var player = _make_player_body(2)
 	if bubble.try_enemy_hit(player):
@@ -462,13 +495,16 @@ func _test_bubble_projectile_launch_move_hit_and_expire() -> void:
 	if not bubble.try_enemy_hit(seed):
 		_fail("active bubble must defeat an enemy that accepts bubble hits")
 		return
-	if bubble.try_enemy_hit(seed) or hits != ["seed-hit:1:bubble-7"]:
+	if bubble.try_enemy_hit(seed) or hits != ["seed-hit:1:bubble-7--1"]:
 		_fail("bubble must emit one enemy hit and then become inactive")
 		return
 	bubble.reset_for_pool()
+	if bubble.projectile_kind != "basic" or bubble.fan_index != 0 or spread_visual.scale != Vector2(0.42, 0.42) or spread_visual.modulate != Color.WHITE:
+		_fail("pool reset must restore the basic bubble identity and appearance")
+		return
 	var releases: Array[int] = []
 	bubble.released.connect(func(_node: Node) -> void: releases.append(1))
-	bubble.launch(1, Vector2.ZERO, -1.0, 8)
+	bubble.launch(1, Vector2.ZERO, Vector2(-360.0, 0.0), 8)
 	bubble.host_step(2.499)
 	if not bubble.active or not releases.is_empty():
 		_fail("bubble must remain active just inside its 2.5 second lifetime")
@@ -476,6 +512,22 @@ func _test_bubble_projectile_launch_move_hit_and_expire() -> void:
 	bubble.host_step(0.001)
 	if bubble.active or releases.size() != 1:
 		_fail("bubble must release exactly at its lifetime boundary")
+		return
+	var restored_bubble = scene.instantiate()
+	root.add_child(restored_bubble)
+	if not restored_bubble.restore_state({
+		"owner_peer_id": 2,
+		"projectile_id": "bubble-9-1",
+		"position": Vector2(40.0, 20.0),
+		"velocity": Vector2(-360.0, 0.0),
+		"remaining": 1.0,
+		"projectile_kind": "spread",
+		"fan_index": 1,
+	}):
+		_fail("projectile restore must accept a valid powered spread member")
+		return
+	if restored_bubble.projectile_kind != "spread" or restored_bubble.fan_index != 1:
+		_fail("projectile restore must preserve powered kind and fan identity")
 
 
 ## Catches the level exceeding six simultaneous bubbles or a pooled projectile
@@ -489,15 +541,15 @@ func _test_bubble_projectile_pool_is_bounded_and_resets() -> void:
 		if bubble == null:
 			_fail("pool must provide each of its six bubble slots")
 			return
-		bubble.launch(1, Vector2.ZERO, 1.0, index + 1)
+		bubble.launch(1, Vector2.ZERO, Vector2(360.0, 0.0), index + 1)
 		acquired.append(bubble)
 	if pool.acquire() != null:
 		_fail("bubble pool must reject a seventh simultaneous projectile")
 		return
 	var first: Node = acquired[0]
 	pool.release(first)
-	if first.active or first.visible:
-		_fail("released bubble must reset active and visible state")
+	if first.active or first.visible or first.projectile_kind != "basic" or first.fan_index != 0:
+		_fail("released bubble must clear active state and powered identity")
 		return
 	if pool.acquire() != first:
 		_fail("bubble pool must reuse the released projectile")
