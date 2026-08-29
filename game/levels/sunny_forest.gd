@@ -87,15 +87,19 @@ func activate_teamwork_part(gate_id: String, part_id: String, peer_id: int, scor
 	var gate = _gates[gate_id]
 	if gate_id == "bubble-grove" and gate.snapshot().get("active_parts", {}).values().has(peer_id):
 		return false
-	if not gate.mark_part(part_id, peer_id):
+	var before: Dictionary = gate.snapshot()
+	var completed: bool = gate.mark_part(part_id, peer_id)
+	if gate.snapshot() == before:
 		return false
 	var event_id := "gate:%s" % gate_id
 	var points: int = _award_authoritative_score(event_id, "teamwork", score_payload) if not score_payload.is_empty() else _award_teamwork_score(event_id)
-	AudioDirector.play_gameplay_cue("teamwork")
-	_open_gate_barrier(gate_id)
-	_show_score_gain(points, Vector2.ZERO)
+	if points > 0:
+		AudioDirector.play_gameplay_cue("teamwork")
+		_show_score_gain(points, Vector2.ZERO)
+	if completed:
+		_open_gate_barrier(gate_id)
 	_render_gameplay_hud()
-	return true
+	return completed
 
 
 func gate_is_open(gate_id: String) -> bool:
@@ -330,8 +334,7 @@ func _prepare_world_event(kind: String, payload: Dictionary) -> Dictionary:
 		"collect", "enemy_defeat":
 			return _with_authoritative_combo_score(payload)
 		"gate_part":
-			if _gate_part_will_complete(payload):
-				return _with_authoritative_combo_score(payload, true)
+			return _with_authoritative_combo_score(payload, true)
 	return payload.duplicate(true)
 
 
@@ -359,17 +362,6 @@ func _apply_world_event_accepted(_sequence: int, kind: String, payload: Dictiona
 			enter_finish(int(payload.get("peer_id", 0)))
 			return _finish_peers.size() != before_count or is_finished() != was_finished
 	return false
-
-
-func _gate_part_will_complete(payload: Dictionary) -> bool:
-	var gate_id := String(payload.get("gate_id", ""))
-	var part_id := String(payload.get("part_id", ""))
-	if not _gates.has(gate_id):
-		return false
-	var state: Dictionary = _gates[gate_id].snapshot()
-	var required: Array = state.get("required_parts", [])
-	var active: Dictionary = state.get("active_parts", {})
-	return not bool(state.get("completed", false)) and required.has(part_id) and not active.has(part_id) and active.size() + 1 == required.size()
 
 
 func _on_collectible_entered(body: Node2D, collectible: Area2D) -> void:

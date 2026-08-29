@@ -62,6 +62,8 @@ func _run() -> void:
 		return
 	if not await _test_score_event_uses_host_combo_outcome():
 		return
+	if not await _test_first_teamwork_part_uses_host_combo_outcome():
+		return
 	if not _test_role_gated_fallen_log(level):
 		return
 	if not _test_bubble_inventory_and_pool(level):
@@ -150,6 +152,47 @@ func _test_score_event_uses_host_combo_outcome() -> bool:
 		return false
 	if host.team_combo.snapshot() != payload["combo_state"] or receiver.team_combo.snapshot() != payload["combo_state"]:
 		_fail("host and receiver must apply the carried resulting combo state exactly")
+		return false
+	host.queue_free()
+	receiver.queue_free()
+	return true
+
+
+## Catches the first accepted gate mutation scoring/refreshing without carrying
+## the host's combo result, leaving a jittered receiver permanently divergent.
+func _test_first_teamwork_part_uses_host_combo_outcome() -> bool:
+	var scene = load("res://levels/sunny_forest.tscn")
+	var host = scene.instantiate()
+	var receiver = scene.instantiate()
+	root.add_child(host)
+	root.add_child(receiver)
+	await process_frame
+	host.process_mode = Node.PROCESS_MODE_DISABLED
+	receiver.process_mode = Node.PROCESS_MODE_DISABLED
+	host.team_combo.commit_scored_event()
+	host.team_combo.commit_scored_event()
+	host.team_combo.step(1.0)
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.step(2.4)
+	var payload: Dictionary = host._prepare_world_event("gate_part", {
+		"gate_id": "fallen-log",
+		"part_id": "log",
+		"peer_id": 2,
+	})
+	if payload.get("score_multiplier", 0) != 1 or payload.get("combo_state", {}) != {"multiplier": 2, "remaining": 2.5}:
+		_fail("first accepted gate part must carry the host teamwork combo outcome")
+		return false
+	if not host.apply_world_event(1, "gate_part", payload) or not receiver.apply_world_event(1, "gate_part", payload):
+		_fail("first valid gate part must be accepted on host and receiver")
+		return false
+	if host.team_score.total != 100 or receiver.team_score.total != 100:
+		_fail("first accepted gate part must award teamwork exactly once on both peers")
+		return false
+	if host.team_combo.snapshot() != payload["combo_state"] or receiver.team_combo.snapshot() != payload["combo_state"]:
+		_fail("first teamwork score must apply the carried combo refresh exactly")
 		return false
 	host.queue_free()
 	receiver.queue_free()
