@@ -16,6 +16,7 @@ const COLLECTIBLE_COLORS := {
 }
 
 @onready var collectibles_layer = $Collectibles
+@onready var _hud = $HUD/TreasureDashHud
 
 var dash_mode: RefCounted = null
 
@@ -36,6 +37,11 @@ func _step_level(delta: float) -> void:
 	if _spawn_timer >= SPAWN_INTERVAL and not dash_mode.is_finished():
 		_spawn_timer = 0.0
 		_try_spawn_collectible()
+	_hud.render(
+		dash_mode.time_remaining(),
+		dash_mode.score(HOST_PEER_ID),
+		dash_mode.score(GUEST_PEER_ID),
+	)
 
 
 func _collect_spawn_points() -> Array:
