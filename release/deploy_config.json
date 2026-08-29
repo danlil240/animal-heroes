@@ -1,0 +1,15 @@
+{
+  "package_id": "org.danlil.animalheroes",
+  "lan_address": "192.168.0.229",
+  "lan_port": 8443,
+  "dashboard_port": 8442,
+  "discovery_port": 28742,
+  "keystore_path": "/home/daniel/keystores/animal-heroes-release.jks",
+  "keystore_alias": "animalheroes",
+  "pinned_signer_sha256": "70e8a19689a590a4a8af28212030c280be0d8075188cc36656d60bfeeb5fcadc",
+  "devices": [
+    {"role": "host", "hardware_id": "R83W80KJX5N"},
+    {"role": "client", "hardware_id": "R83W80KK03Y"}
+  ],
+  "retention": "retain_all"
+}
