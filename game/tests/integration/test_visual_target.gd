@@ -48,6 +48,8 @@ func _run() -> void:
 		return
 	if not _test_gameplay_hud_presentation():
 		return
+	if not await _test_coop_hud_presence():
+		return
 	if not _test_complete_arena_composition():
 		return
 	if not await _test_ground_art_covers_collider():
@@ -225,6 +227,26 @@ func _test_gameplay_hud_presentation() -> bool:
 	if not hud.get_node("Context").visible or hud.get_node("Context/Icon").text != "↔":
 		return _fail_bool("HUD must show the push context without moving controls")
 	hud.queue_free()
+	return true
+
+
+func _test_coop_hud_presence() -> bool:
+	for level_path in [
+		"res://levels/cloud_factory.tscn",
+		"res://levels/crystal_caves.tscn",
+		"res://levels/robot_boss.tscn",
+	]:
+		var level = load(level_path).instantiate()
+		root.add_child(level)
+		await process_frame
+		var hud = level.get_node_or_null("HUD/GameplayHud")
+		if hud == null:
+			level.queue_free()
+			return _fail_bool("%s must compose the coop GameplayHud" % level_path.get_file())
+		if not hud.has_method("render"):
+			level.queue_free()
+			return _fail_bool("%s GameplayHud must expose render()" % level_path.get_file())
+		level.queue_free()
 	return true
 
 

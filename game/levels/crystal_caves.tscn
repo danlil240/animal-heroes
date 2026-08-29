@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource type="Script" path="res://levels/crystal_caves.gd" id="1_caves"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -18,6 +18,7 @@
 [ext_resource type="PackedScene" path="res://visual/switch_visual.tscn" id="16_switch_visual"]
 [ext_resource type="PackedScene" path="res://visual/door_visual.tscn" id="17_door_visual"]
 [ext_resource type="PackedScene" path="res://visual/boulder_visual.tscn" id="18_boulder_visual"]
+[ext_resource type="PackedScene" path="res://ui/gameplay_hud.tscn" id="19_gameplay_hud"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(3200, 80)
@@ -328,6 +329,8 @@ limit_bottom = 800
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="TouchControls" parent="HUD" instance=ExtResource("5_touch")]
+
+[node name="GameplayHud" parent="HUD" instance=ExtResource("19_gameplay_hud")]
 
 [node name="PartnerIndicator" type="Control" parent="HUD"]
 layout_mode = 0

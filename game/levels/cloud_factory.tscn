@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3]
+[gd_scene load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://levels/cloud_factory.gd" id="1_factory"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -16,6 +16,7 @@
 [ext_resource type="PackedScene" path="res://visual/fan_visual.tscn" id="14_fan_visual"]
 [ext_resource type="PackedScene" path="res://visual/conveyor_visual.tscn" id="15_conveyor_visual"]
 [ext_resource type="PackedScene" path="res://visual/exit_visual.tscn" id="16_exit_visual"]
+[ext_resource type="PackedScene" path="res://ui/gameplay_hud.tscn" id="17_gameplay_hud"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(3200, 80)
@@ -299,6 +300,8 @@ limit_bottom = 800
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="TouchControls" parent="HUD" instance=ExtResource("5_touch")]
+
+[node name="GameplayHud" parent="HUD" instance=ExtResource("17_gameplay_hud")]
 
 [node name="PartnerIndicator" type="Control" parent="HUD"]
 layout_mode = 0
