@@ -1,5 +1,6 @@
 ; Engine configuration file.
-; It is best edited using the editor and not directly.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
 ;
 ; Format:
 ;   [section] ; section goes between []
@@ -10,8 +11,9 @@ config_version=5
 [application]
 
 config/name="Animal Heroes"
-config/icon="res://art/ui/app_icon.svg"
 run/main_scene="res://ui/game_shell.tscn"
+config/features=PackedStringArray("4.7")
+config/icon="res://art/ui/app_icon.svg"
 
 [autoload]
 
@@ -25,7 +27,6 @@ AudioDirector="*res://audio/audio_director.gd"
 window/size/viewport_width=1340
 window/size/viewport_height=800
 window/stretch/mode="canvas_items"
-window/handheld/orientation=0
 
 [physics]
 
@@ -33,6 +34,6 @@ common/physics_ticks_per_second=30
 
 [rendering]
 
-textures/vram_compression/import_etc2_astc=true
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true

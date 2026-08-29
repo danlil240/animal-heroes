@@ -6,3 +6,4 @@ build/
 game/.godot/
 *.gd.uid
 __pycache__/
+graphify-out/
