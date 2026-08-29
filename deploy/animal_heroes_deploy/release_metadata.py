@@ -118,7 +118,7 @@ def render_export_presets(existing: str, metadata: ReleaseMetadata) -> str:
     return rendered
 
 
-def _atomic_write(path: Path, content: str) -> None:
+def _stage_write(path: Path, content: str) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         mode="w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", delete=False
@@ -126,8 +126,19 @@ def _atomic_write(path: Path, content: str) -> None:
         temporary.write(content)
         temporary.flush()
         os.fsync(temporary.fileno())
-        temporary_path = Path(temporary.name)
-    os.replace(temporary_path, path)
+        return Path(temporary.name)
+
+
+def _stage_original(path: Path) -> Path | None:
+    if not path.exists():
+        return None
+    return _stage_write(path, path.read_text(encoding="utf-8"))
+
+
+def _cleanup(paths: list[Path | None]) -> None:
+    for path in paths:
+        if path is not None:
+            path.unlink(missing_ok=True)
 
 
 def _render_checkout(root: Path, metadata: ReleaseMetadata) -> dict[Path, str]:
@@ -144,8 +155,32 @@ def _render_checkout(root: Path, metadata: ReleaseMetadata) -> dict[Path, str]:
 
 def sync_checkout(root: Path, metadata: ReleaseMetadata) -> None:
     metadata.validate()
-    for path, content in _render_checkout(root, metadata).items():
-        _atomic_write(path, content)
+    rendered = _render_checkout(root, metadata)
+    staged_outputs: dict[Path, Path] = {}
+    staged_originals: dict[Path, Path | None] = {}
+    try:
+        staged_outputs = {
+            path: _stage_write(path, content) for path, content in rendered.items()
+        }
+        staged_originals = {path: _stage_original(path) for path in rendered}
+        try:
+            for path, staged_output in staged_outputs.items():
+                os.replace(staged_output, path)
+        except OSError:
+            rollback_error: OSError | None = None
+            for path, staged_original in staged_originals.items():
+                try:
+                    if staged_original is None:
+                        path.unlink(missing_ok=True)
+                    else:
+                        os.replace(staged_original, path)
+                except OSError as error:
+                    rollback_error = rollback_error or error
+            if rollback_error is not None:
+                raise MetadataError("release metadata sync rollback failed") from rollback_error
+            raise
+    finally:
+        _cleanup(list(staged_outputs.values()) + list(staged_originals.values()))
 
 
 def check_checkout(root: Path, metadata: ReleaseMetadata) -> None:

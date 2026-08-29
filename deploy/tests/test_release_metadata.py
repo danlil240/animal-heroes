@@ -1,13 +1,16 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from deploy.animal_heroes_deploy.release_metadata import (
     MetadataDriftError,
     MetadataError,
     ReleaseMetadata,
     check_checkout,
+    sync_checkout,
 )
 
 
@@ -65,3 +68,38 @@ class ReleaseMetadataTests(unittest.TestCase):
 
         with self.assertRaises(MetadataDriftError):
             check_checkout(root, ReleaseMetadata.load(root / "release/metadata.json"))
+
+    def test_sync_checkout_writes_all_generated_files(self) -> None:
+        root = make_checkout(self, version_name="wrong", version_code=99)
+        metadata = ReleaseMetadata.load(root / "release/metadata.json")
+
+        sync_checkout(root, metadata)
+
+        check_checkout(root, metadata)
+
+    def test_sync_checkout_restores_both_files_when_later_replacement_fails(self) -> None:
+        root = make_checkout(self, version_name="wrong", version_code=99)
+        metadata = ReleaseMetadata.load(root / "release/metadata.json")
+        build_info_path = root / "game/core/build_info.gd"
+        export_path = root / "game/export_presets.cfg"
+        original_build_info = build_info_path.read_text(encoding="utf-8")
+        original_export = export_path.read_text(encoding="utf-8")
+        original_replace = os.replace
+        replacement_failed = False
+
+        def fail_export_replacement(source: object, destination: object) -> None:
+            nonlocal replacement_failed
+            if Path(destination) == export_path and not replacement_failed:
+                replacement_failed = True
+                raise OSError("simulated export replacement failure")
+            original_replace(source, destination)
+
+        with patch(
+            "deploy.animal_heroes_deploy.release_metadata.os.replace",
+            side_effect=fail_export_replacement,
+        ), self.assertRaises(OSError):
+            sync_checkout(root, metadata)
+
+        self.assertTrue(replacement_failed)
+        self.assertEqual(build_info_path.read_text(encoding="utf-8"), original_build_info)
+        self.assertEqual(export_path.read_text(encoding="utf-8"), original_export)
