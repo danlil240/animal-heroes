@@ -1,8 +1,6 @@
 class_name MetalPlatformVisual
-extends Node2D
+extends PlatformVisual
 
-@export var ground_variant: bool = false
-
-func _ready() -> void:
-	$Ground.visible = ground_variant
-	$Small.visible = not ground_variant
+## Cloud Factory / Robot Boss reskin of the shared platform decoration. The scene
+## supplies the metal artwork; visibility and collider coverage come from
+## PlatformVisual.

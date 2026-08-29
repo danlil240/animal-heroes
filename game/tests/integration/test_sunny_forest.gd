@@ -41,9 +41,34 @@ func _run() -> void:
 	if enemies.size() < 1:
 		_fail("sunny forest must have at least one enemy")
 		return
+	if not _test_platforms_are_reachable(level):
+		return
 	level.queue_free()
 	await process_frame
 	quit(0)
+
+
+## Both heroes must be able to jump from the ground onto the lowest platform
+## tier. The fox jumps lower than the rabbit, so it is the binding case: if its
+## jump does not clear the first step the campaign is impassable on that tablet.
+func _test_platforms_are_reachable(level: Node) -> bool:
+	var ground_shape: CollisionShape2D = level.get_node("Ground/CollisionShape2D")
+	var ground_top: float = ground_shape.global_position.y - (ground_shape.shape as RectangleShape2D).size.y * 0.5
+	var lowest_step := INF
+	for platform in level.get_tree().get_nodes_in_group("forest_platform"):
+		var shape: CollisionShape2D = platform.get_node("CollisionShape2D")
+		var top: float = shape.global_position.y - (shape.shape as RectangleShape2D).size.y * 0.5
+		lowest_step = minf(lowest_step, ground_top - top)
+	for hero_name in ["Rabbit", "Fox"]:
+		var hero = level.get_node(hero_name)
+		# Apex of a jump under constant gravity, measured from the rest pose.
+		var reach: float = hero.profile.jump_speed * hero.profile.jump_speed / (2.0 * hero.gravity)
+		if reach <= lowest_step:
+			_fail("%s must be able to reach the lowest platform: jump reaches %.1f px, first step is %.1f px" % [
+				hero_name, reach, lowest_step,
+			])
+			return false
+	return true
 
 
 func _fail(message: String) -> void:

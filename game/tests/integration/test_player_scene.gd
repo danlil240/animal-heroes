@@ -78,7 +78,7 @@ func _test_coyote_boundaries(profile: Resource) -> bool:
 	inside.physics_step(0.099)
 	inside.apply_input(_frame(0.0, true))
 	inside.physics_step(0.0)
-	if inside.velocity.y != -440.0:
+	if inside.velocity.y != -profile.jump_speed:
 		_fail("jump must work just inside the 0.10 second coyote window: velocity %s, coyote %s, grounded %s" % [inside.velocity.y, inside.snapshot().coyote_remaining, inside.snapshot().grounded])
 		return false
 
@@ -119,7 +119,7 @@ func _test_jump_buffer_boundaries(profile: Resource) -> bool:
 	inside.position = Vector2(0.0, 166.0)
 	inside.velocity = Vector2.ZERO
 	inside.physics_step(0.0)
-	if inside.velocity.y != -440.0:
+	if inside.velocity.y != -profile.jump_speed:
 		_fail("a jump pressed just inside the 0.12 second buffer must fire on landing: after press %s, before %s, velocity %s, buffer %s, grounded %s" % [inside_buffer_after_press, inside_buffer_before_landing, inside.velocity.y, inside.snapshot().jump_buffer_remaining, inside.snapshot().grounded])
 		return false
 

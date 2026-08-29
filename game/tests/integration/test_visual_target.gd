@@ -48,7 +48,44 @@ func _run() -> void:
 		return
 	if not _test_complete_arena_composition():
 		return
+	if not await _test_ground_art_covers_collider():
+		return
 	quit(0)
+
+
+## Every walkable collider has to be drawn end to end. The ground art is a fixed
+## 1600 px sprite while the ground colliders run up to 3400 px, so an uncovered
+## collider leaves the heroes standing and walking on invisible ground.
+func _test_ground_art_covers_collider() -> bool:
+	for level_path in [
+		"res://levels/sunny_forest.tscn",
+		"res://levels/crystal_caves.tscn",
+		"res://levels/cloud_factory.tscn",
+		"res://levels/robot_boss.tscn",
+		"res://levels/star_race_arena.tscn",
+		"res://levels/treasure_dash_arena.tscn",
+		"res://levels/bubble_bounce_arena.tscn",
+		"res://levels/test_arena.tscn",
+	]:
+		var level = load(level_path).instantiate()
+		root.add_child(level)
+		await process_frame
+		var ground: StaticBody2D = level.get_node("Ground")
+		var shape: CollisionShape2D = ground.get_node("CollisionShape2D")
+		var size: Vector2 = (shape.shape as RectangleShape2D).size
+		var art: Sprite2D = ground.get_node("Visual").get_node("Ground")
+		var art_width: float = art.texture.get_width() * art.global_scale.x
+		var collider_left: float = shape.global_position.x - size.x * 0.5
+		var collider_right: float = shape.global_position.x + size.x * 0.5
+		var art_left: float = art.global_position.x - art_width * 0.5
+		var art_right: float = art.global_position.x + art_width * 0.5
+		var uncovered := art_left > collider_left + 0.5 or art_right < collider_right - 0.5
+		level.queue_free()
+		if uncovered:
+			return _fail_bool("%s ground art (x %.0f..%.0f) must cover its collider (x %.0f..%.0f)" % [
+				level_path.get_file(), art_left, art_right, collider_left, collider_right,
+			])
+	return true
 
 
 func _test_background_parallax() -> bool:
@@ -115,6 +152,14 @@ func _test_hero_presentation() -> bool:
 			return _fail_bool("%s must keep gameplay nodes and gain a Visual child" % hero_name)
 		if hero.get_node_or_null("BodyArt") != null:
 			return _fail_bool("%s must not retain placeholder body art" % hero_name)
+		# The art has to stand on the same line the collision box rests on,
+		# otherwise the hero reads as floating above the ground.
+		var shape: CollisionShape2D = hero.get_node("CollisionShape2D")
+		var box_bottom: float = shape.global_position.y + (shape.shape as RectangleShape2D).size.y * 0.5
+		var art: Sprite2D = visual.get_node("Pose/RabbitArt" if hero_name == "Rabbit" else "Pose/FoxArt")
+		var art_bottom: float = art.global_position.y + art.texture.get_height() * art.global_scale.y * 0.5
+		if absf(box_bottom - art_bottom) > 1.0:
+			return _fail_bool("%s art must rest on the ground line, not float (gap %.1f px)" % [hero_name, box_bottom - art_bottom])
 		var before_position := hero.position
 		var before_velocity := hero.velocity
 		visual._process(1.0 / 30.0)

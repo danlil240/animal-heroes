@@ -5,6 +5,6 @@
 [resource]
 script = ExtResource("1_profile")
 move_speed = 240.0
-jump_speed = 440.0
+jump_speed = 580.0
 max_hearts = 3
 can_push_heavy = false

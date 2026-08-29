@@ -12,12 +12,12 @@ script = ExtResource("1_script")
 position = Vector2(0, -30)
 
 [node name="RabbitArt" type="Sprite2D" parent="Pose"]
-position = Vector2(0, -19)
+position = Vector2(0, 6.5)
 scale = Vector2(0.5, 0.5)
 texture = ExtResource("2_rabbit")
 
 [node name="FoxArt" type="Sprite2D" parent="Pose"]
-position = Vector2(0, -16)
+position = Vector2(0, 7.2)
 scale = Vector2(0.52, 0.52)
 texture = ExtResource("3_fox")
 
