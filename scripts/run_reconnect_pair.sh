@@ -5,6 +5,10 @@ PROJECT_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 GODOT_BIN="${GODOT_BIN:-godot}"
 RUN_DIR=$(mktemp -d)
 cleanup() {
+  status=$?
+  if [[ "$status" -ne 0 ]]; then
+    cat "$RUN_DIR/host.log" "$RUN_DIR/client.log" "$RUN_DIR/third.log" 2>/dev/null || true
+  fi
   jobs -pr | xargs -r kill 2>/dev/null || true
   rm -rf "$RUN_DIR"
 }

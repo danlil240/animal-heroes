@@ -23,7 +23,11 @@ Run:
 HOST_SERIAL=<serial> CLIENT_SERIAL=<serial> bash scripts/device_smoke.sh
 ```
 
-Record the following for each device after a 10-minute Cloud Factory traversal:
+`device_smoke.sh` captures before/after device evidence, but its interval is
+operator-driven: during the ten minutes, host/join the game and traverse Cloud
+Factory on both tablets. Launching the two app processes alone is not gameplay.
+
+Record the following for each device after that 10-minute Cloud Factory traversal:
 
 | Metric | Tablet 1 (Host) | Tablet 2 (Client) |
 | --- | --- | --- |

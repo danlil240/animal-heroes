@@ -10,6 +10,7 @@ config_version=5
 [application]
 
 config/name="Animal Heroes"
+config/icon="res://art/ui/app_icon.svg"
 run/main_scene="res://ui/game_shell.tscn"
 
 [autoload]

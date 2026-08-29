@@ -5,3 +5,4 @@ build/
 *.tmp
 game/.godot/
 *.gd.uid
+__pycache__/

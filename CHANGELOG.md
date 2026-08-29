@@ -31,9 +31,12 @@ All notable changes to Animal Heroes are documented in this file.
 - Android build script, permission audit, and device smoke test harness
 - Performance check test for entity budget verification
 - Release checklist, SM-T220 performance doc, and child usability test plan
+- Android application icon and smoke contract for its configured, loadable SVG
+- Release metadata reconciled with the installed Godot, Java, and Android toolchain
 
 ### Pending
 
 - Physical SM-T220 tablet endurance and FPS validation
 - Supervised child usability sessions
-- Signed release APK build (requires keystore and Android SDK)
+- Signed release APK build (requires keystore)
+- Creator and distribution-rights provenance for all shipped WAV assets

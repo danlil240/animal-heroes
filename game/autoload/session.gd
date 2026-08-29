@@ -10,6 +10,7 @@ signal snapshot_received(snapshot: Dictionary)
 signal reconnect_state_changed(next_state: String)
 signal checkpoint_confirmed(checkpoint: Dictionary)
 signal level_start_received(level_id: String)
+signal level_start_acknowledged(peer_id: int, level_id: String)
 
 const GameConfig = preload("res://core/game_config.gd")
 const SessionState = preload("res://network/session_state.gd")
@@ -121,6 +122,15 @@ func deliver_level_start(level_id: String) -> void:
 		return
 	current_level_id = level_id
 	level_start_received.emit(level_id)
+	if not _is_host and _peer != null:
+		acknowledge_level_start.rpc_id(1, level_id)
+
+
+@rpc("any_peer", "reliable")
+func acknowledge_level_start(level_id: String) -> void:
+	if not _is_host or level_id != current_level_id:
+		return
+	level_start_acknowledged.emit(multiplayer.get_remote_sender_id(), level_id)
 
 
 func join_game(host: String, port: int = GameConfig.GAME_PORT, character_id: String = "fox") -> Error:
@@ -278,7 +288,7 @@ func _on_connected_to_server() -> void:
 		request_resume.rpc(session_id)
 		return
 	_set_state(LOBBY)
-	request_lobby_entry.rpc(GameConfig.PROTOCOL_VERSION, GameConfig.CONTENT_VERSION, selected_character)
+	request_lobby_entry.rpc(Protocol.local_build_descriptor(), selected_character)
 
 
 func _on_connection_failed() -> void:
@@ -348,22 +358,31 @@ func _complete_resume() -> void:
 
 
 @rpc("any_peer", "reliable")
-func request_lobby_entry(protocol_version: int, content_version: String, requested_character: String) -> void:
+func request_lobby_entry(build: Dictionary, requested_character: String) -> void:
 	if not _is_host:
 		return
 	var peer_id := multiplayer.get_remote_sender_id()
-	if protocol_version != GameConfig.PROTOCOL_VERSION or content_version != GameConfig.CONTENT_VERSION:
-		reject_lobby_entry.rpc_id(peer_id, "גרסת המשחק אינה תואמת")
-		_peer.disconnect_peer(peer_id)
+	var comparison := Protocol.compare_builds(Protocol.local_build_descriptor(), build)
+	if not bool(comparison.get("compatible", false)):
+		_reject_lobby_peer(peer_id, String(comparison.get("relation", "unknown")))
 		return
+	_accept_lobby_character(peer_id, requested_character)
+
+
+func _reject_lobby_peer(peer_id: int, reason: String) -> void:
+	reject_lobby_entry.rpc_id(peer_id, reason, Protocol.local_build_descriptor())
+	get_tree().create_timer(0.1).timeout.connect(func() -> void:
+		if _peer != null and _peer.get_peer(peer_id) != null:
+			_peer.disconnect_peer(peer_id, true))
+
+
+func _accept_lobby_character(peer_id: int, requested_character: String) -> void:
 	if requested_character != "rabbit" and requested_character != "fox":
-		reject_lobby_entry.rpc_id(peer_id, "הדמות שנבחרה אינה זמינה")
-		_peer.disconnect_peer(peer_id)
+		_reject_lobby_peer(peer_id, "invalid_character")
 		return
 	var character_id := requested_character if not _characters_by_peer.values().has(requested_character) else _other_character(requested_character)
 	if _characters_by_peer.values().has(character_id):
-		reject_lobby_entry.rpc_id(peer_id, "המשחק מלא")
-		_peer.disconnect_peer(peer_id)
+		_reject_lobby_peer(peer_id, "game_full")
 		return
 	_characters_by_peer[peer_id] = character_id
 	confirm_lobby_entry.rpc_id(peer_id, character_id, session_id)
@@ -383,9 +402,23 @@ func confirm_lobby_entry(character_id: String, host_session_id: String) -> void:
 
 
 @rpc("authority", "reliable")
-func reject_lobby_entry(message: String) -> void:
-	_fail(message)
+func reject_lobby_entry(relation: String, _host_build: Dictionary) -> void:
+	_fail(_message_for_lobby_rejection(relation))
 	leave_game()
+
+
+func _message_for_lobby_rejection(relation: String) -> String:
+	match relation:
+		"local_older":
+			return "צריך לעדכן את הטאבלט הזה לפני המשחק"
+		"remote_older":
+			return "צריך לעדכן את הטאבלט השני לפני המשחק"
+		"invalid_character":
+			return "הדמות שנבחרה אינה זמינה"
+		"game_full":
+			return "המשחק מלא"
+		_:
+			return "גרסאות המשחק אינן תואמות. עדכנו את שני הטאבלטים"
 
 
 @rpc("any_peer", "reliable")

@@ -17,17 +17,19 @@ supervised usability result.
 | 6 | Three competitive modes with rematch | `test_star_race.gd`, `test_treasure_dash.gd`, `test_bubble_bounce.gd`, `test_results_flow.gd` | PASS (automated) |
 | 7 | Hebrew RTL UI with touch controls | `test_hebrew_ui.gd` | PASS (automated) |
 | 8 | Original child-friendly art, no copyrighted assets | Visual target acceptance record | PASS (desktop) |
-| 9 | Child usability with minimal adult help | Supervised usability sessions | PENDING USABILITY CHECK |
+| 9 | Configured Android application icon | `test_project_smoke.gd` and editor import | PASS (automated) |
+| 10 | Audio creator and distribution rights recorded | `game/assets/ATTRIBUTION.md` provenance review | PENDING PROVENANCE CHECK |
+| 11 | Child usability with minimal adult help | Supervised usability sessions | PENDING USABILITY CHECK |
 
 ## Build Artifacts
 
 | Artifact | Status |
 | --- | --- |
-| `build/animal-heroes-debug.apk` | PENDING (no Android SDK) |
-| `build/animal-heroes-debug.apk.sha256` | PENDING |
+| `build/animal-heroes-debug.apk` | PASS — 2026-08-29; Godot 4.7.2.stable.official; 29,714,438 bytes; SHA-256 `f614d5d81fd9ab3cffa9707c5febc6d475550cd0c5d24af36865401316d51542` |
+| `build/animal-heroes-debug.apk.sha256` | PASS — verified with `sha256sum --check` on 2026-08-29 |
 | `build/animal-heroes-release.apk` | PENDING (no keystore) |
 | `build/animal-heroes-release.apk.sha256` | PENDING |
-| Permission audit (no sensitive permissions) | PENDING (no APK) |
+| Permission audit (exact LAN permission set) | PASS — exactly `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`, and `INTERNET` |
 
 ## Automated Test Suite
 
@@ -39,14 +41,15 @@ All headless tests must pass. Current status: PASS.
 
 ## Pre-Release Steps
 
-1. [ ] Install Android SDK and Godot export templates
+1. [ ] Record creator and distribution rights for every WAV asset
 2. [ ] Build and verify debug APK
 3. [ ] Run permission audit
-4. [ ] Install on both SM-T220 tablets
-5. [ ] Run endurance matrix on both tablets
-6. [ ] Conduct supervised child usability sessions
-7. [ ] Build signed release APK
-8. [ ] Verify SHA-256 checksum
-9. [ ] Install release on both tablets
-10. [ ] Complete one cooperative checkpoint and one competitive match
-11. [ ] Tag release: `git tag -a v1.0.0-rc1 -m "Animal Heroes 1.0.0 release candidate"`
+4. [ ] Connect and authorize both SM-T220 tablets with ADB
+5. [ ] Install on both SM-T220 tablets
+6. [ ] Run endurance matrix on both tablets
+7. [ ] Conduct supervised child usability sessions
+8. [ ] Build signed release APK
+9. [ ] Verify SHA-256 checksum
+10. [ ] Install release on both tablets
+11. [ ] Complete one cooperative checkpoint and one competitive match
+12. [ ] Tag release: `git tag -a v1.0.0-rc1 -m "Animal Heroes 1.0.0 release candidate"`
