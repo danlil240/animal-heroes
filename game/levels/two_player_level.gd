@@ -45,6 +45,10 @@ var _finished: bool = false
 var _net_sync_accumulator: float = 0.0
 var _remote_input_frame = null
 var _has_remote_input: bool = false
+var _last_world_request_by_peer: Dictionary = {}
+var _next_local_world_request_sequence: int = 0
+var _next_world_event_sequence: int = 0
+var _last_applied_world_event_sequence: int = 0
 
 
 func _ready() -> void:
@@ -148,6 +152,75 @@ func is_finished() -> bool:
 	return _finished
 
 
+## Sends one rising-edge context action to the host. Offline scenes process the
+## same request locally through process_world_action().
+func request_world_action(action_id: String, target_id: String, hero_position: Vector2) -> void:
+	if action_id.is_empty() or target_id.is_empty():
+		return
+	_next_local_world_request_sequence += 1
+	if _is_world_authority():
+		var peer_id := int(_local_hero().get("peer_id"))
+		process_world_action(peer_id, _next_local_world_request_sequence, action_id, target_id, hero_position)
+	else:
+		_receive_world_action.rpc_id(1, _next_local_world_request_sequence, action_id, target_id, hero_position)
+
+
+## Production request-processing boundary shared by local-host input and RPC.
+## The RPC obtains peer_id from MultiplayerAPI and never accepts it from payload.
+func process_world_action(peer_id: int, request_sequence: int, action_id: String, target_id: String, hero_position: Vector2) -> bool:
+	if peer_id <= 0 or request_sequence <= 0 or action_id.is_empty() or target_id.is_empty():
+		return false
+	var last_sequence := int(_last_world_request_by_peer.get(peer_id, 0))
+	if request_sequence <= last_sequence:
+		return false
+	_last_world_request_by_peer[peer_id] = request_sequence
+	var event: Dictionary = _validate_world_action(peer_id, action_id, target_id, hero_position)
+	var kind := String(event.get("kind", ""))
+	var payload: Variant = event.get("payload", null)
+	if kind.is_empty() or not payload is Dictionary:
+		return false
+	_next_world_event_sequence += 1
+	if not apply_world_event(_next_world_event_sequence, kind, payload):
+		return false
+	if _has_live_world_peer() and _is_world_authority():
+		_receive_world_event.rpc(_next_world_event_sequence, kind, payload)
+	return true
+
+
+func apply_world_event(event_sequence: int, kind: String, payload: Dictionary) -> bool:
+	if event_sequence <= _last_applied_world_event_sequence or kind.is_empty():
+		return false
+	_last_applied_world_event_sequence = event_sequence
+	_apply_world_event(event_sequence, kind, payload)
+	return true
+
+
+func last_world_event_sequence() -> int:
+	return _last_applied_world_event_sequence
+
+
+@rpc("any_peer", "reliable")
+func _receive_world_action(request_sequence: int, action_id: String, target_id: String, hero_position: Vector2) -> void:
+	if not _is_world_authority():
+		return
+	process_world_action(multiplayer.get_remote_sender_id(), request_sequence, action_id, target_id, hero_position)
+
+
+@rpc("authority", "reliable")
+func _receive_world_event(event_sequence: int, kind: String, payload: Dictionary) -> void:
+	apply_world_event(event_sequence, kind, payload)
+
+
+func _is_world_authority() -> bool:
+	var session = get_node_or_null("/root/Session")
+	return session == null or session.state != Session.PLAYING or session.is_host()
+
+
+func _has_live_world_peer() -> bool:
+	var session = get_node_or_null("/root/Session")
+	return session != null and session.state == Session.PLAYING and session._peer != null
+
+
 # Hooks for concrete levels.
 
 func _setup_level() -> void:
@@ -159,6 +232,14 @@ func _step_level(_delta: float) -> void:
 
 
 func _present_level(_delta: float) -> void:
+	pass
+
+
+func _validate_world_action(_peer_id: int, _action_id: String, _target_id: String, _hero_position: Vector2) -> Dictionary:
+	return {}
+
+
+func _apply_world_event(_sequence: int, _kind: String, _payload: Dictionary) -> void:
 	pass
 
 

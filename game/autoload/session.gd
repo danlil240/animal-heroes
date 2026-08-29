@@ -205,6 +205,14 @@ func set_authoritative_snapshot(snapshot: Dictionary) -> void:
 	_authoritative_snapshot = snapshot
 
 
+func is_host() -> bool:
+	return _is_host
+
+
+func authoritative_snapshot() -> Dictionary:
+	return _authoritative_snapshot.duplicate(true)
+
+
 func notify_traffic() -> void:
 	_traffic_timer = 0.0
 

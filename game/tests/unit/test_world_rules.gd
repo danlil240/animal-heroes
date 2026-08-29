@@ -29,6 +29,8 @@ func _init() -> void:
 	_test_seed_actor_telegraphs_hops_and_accepts_bubble()
 	_test_bubble_projectile_launch_move_hit_and_expire()
 	_test_bubble_projectile_pool_is_bounded_and_resets()
+	_test_teamwork_gate_requires_unique_known_parts()
+	_test_teamwork_gate_snapshot_preserves_completion()
 	quit(0)
 
 
@@ -489,6 +491,56 @@ func _test_bubble_projectile_pool_is_bounded_and_resets() -> void:
 		return
 	if pool.acquire() != first:
 		_fail("bubble pool must reuse the released projectile")
+
+
+## Catches one hero repeating the same action to complete a two-part gate, or
+## an unknown scene target advancing progress.
+func _test_teamwork_gate_requires_unique_known_parts() -> void:
+	var gate_script = load("res://world/teamwork_gate.gd")
+	if gate_script == null:
+		_fail("teamwork gate rules must exist")
+		return
+	var gate = gate_script.new()
+	gate.configure("fallen-log", ["log", "overhead-switch"])
+	var completions: Array[String] = []
+	gate.completed.connect(func(gate_id: String) -> void: completions.append(gate_id))
+	if gate.mark_part("unknown", 1):
+		_fail("unknown teamwork part must be rejected")
+		return
+	if gate.mark_part("log", 2):
+		_fail("first of two teamwork parts must not complete the gate")
+		return
+	if gate.mark_part("log", 2):
+		_fail("duplicate teamwork part must be rejected")
+		return
+	if not gate.mark_part("overhead-switch", 1) or not gate.is_complete():
+		_fail("two unique known parts must complete the gate")
+		return
+	if gate.mark_part("overhead-switch", 1) or completions != ["fallen-log"]:
+		_fail("completed teamwork gate must emit exactly once")
+
+
+## Catches reconnect reopening a completed gate or forgetting a partial gate.
+func _test_teamwork_gate_snapshot_preserves_completion() -> void:
+	var gate_script = load("res://world/teamwork_gate.gd")
+	if gate_script == null:
+		_fail("teamwork gate rules must exist")
+		return
+	var original = gate_script.new()
+	original.configure("pressure-flowers", ["left", "right"])
+	original.mark_part("left", 1)
+	var partial = gate_script.new()
+	partial.configure("pressure-flowers", ["left", "right"])
+	if not partial.restore(original.snapshot()) or partial.is_complete():
+		_fail("partial teamwork snapshot must restore without completing")
+		return
+	if not partial.mark_part("right", 2):
+		_fail("restored partial gate must accept its missing part")
+		return
+	var complete = gate_script.new()
+	complete.configure("pressure-flowers", ["left", "right"])
+	if not complete.restore(partial.snapshot()) or not complete.is_complete():
+		_fail("completed teamwork snapshot must remain open after restore")
 
 
 func _make_interaction(id: String, priority: int, at_position: Vector2) -> TestInteraction:
