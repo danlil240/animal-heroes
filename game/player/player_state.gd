@@ -8,6 +8,8 @@ var hearts: int = 0
 var max_hearts: int = 0
 var can_push_heavy: bool = false
 var grounded: bool = false
+var run_speed_ratio: float = 0.0
+var just_landed: bool = false
 var input_axis: float = 0.0
 var jump_pressed: bool = false
 var action_pressed: bool = false
@@ -30,6 +32,8 @@ func to_dictionary() -> Dictionary:
 		"max_hearts": max_hearts,
 		"can_push_heavy": can_push_heavy,
 		"grounded": grounded,
+		"run_speed_ratio": run_speed_ratio,
+		"just_landed": just_landed,
 		"input_axis": input_axis,
 		"jump_pressed": jump_pressed,
 		"action_pressed": action_pressed,

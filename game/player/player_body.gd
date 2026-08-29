@@ -7,6 +7,7 @@ const PlayerStateScript = preload("res://player/player_state.gd")
 
 const COYOTE_TIME: float = 0.10
 const JUMP_BUFFER_TIME: float = 0.12
+const STOMP_REBOUND_SPEED: float = 340.0
 const DAMAGE_COOLDOWN: float = 0.75
 const RESPAWN_DELAY: float = 1.0
 const SPAWN_PROTECTION: float = 1.25
@@ -34,6 +35,7 @@ var _respawn_remaining: float = 0.0
 var _spawn_protection_remaining: float = 0.0
 var _pending_respawn_position: Vector2 = Vector2.ZERO
 var _last_damage_source_peer_id: int = 0
+var _just_landed: bool = false
 var _initialized: bool = false
 
 
@@ -66,6 +68,7 @@ func apply_input(frame: PlayerInputScript.InputFrame) -> void:
 func physics_step(delta: float) -> void:
 	_ensure_initialized()
 	var step := maxf(delta, 0.0)
+	_just_landed = false
 	_spawn_protection_remaining = _count_down(_spawn_protection_remaining, step)
 	if _respawn_remaining > 0.0:
 		_respawn_remaining = _count_down(_respawn_remaining, step)
@@ -82,11 +85,24 @@ func physics_step(delta: float) -> void:
 		_coyote_remaining = _count_down(_coyote_remaining, step)
 		velocity.y += gravity * step
 	_jump_buffer_remaining = _count_down(_jump_buffer_remaining, step)
-	velocity.x = _input_axis * profile.move_speed
+	var acceleration := profile.ground_acceleration if was_on_floor else profile.air_acceleration
+	var target_speed := _input_axis * profile.max_run_speed
+	if is_zero_approx(_input_axis):
+		velocity.x = move_toward(velocity.x, 0.0, profile.ground_deceleration * step)
+	else:
+		velocity.x = move_toward(velocity.x, target_speed, acceleration * step)
+	if not _jump_pressed and velocity.y < 0.0:
+		velocity.y += gravity * (profile.jump_cut_gravity_multiplier - 1.0) * step
 	move_and_slide()
-	if is_on_floor():
+	var is_now_on_floor := is_on_floor()
+	_just_landed = not was_on_floor and is_now_on_floor
+	if is_now_on_floor:
 		_coyote_remaining = COYOTE_TIME
 		_try_buffered_jump(true)
+
+
+func apply_stomp_rebound() -> void:
+	velocity.y = -STOMP_REBOUND_SPEED
 
 
 func take_hit(source_peer_id: int) -> bool:
@@ -160,6 +176,8 @@ func snapshot() -> PlayerStateScript:
 	state.max_hearts = profile.max_hearts
 	state.can_push_heavy = profile.can_push_heavy
 	state.grounded = is_on_floor()
+	state.run_speed_ratio = absf(velocity.x) / profile.max_run_speed
+	state.just_landed = _just_landed
 	state.input_axis = _input_axis
 	state.jump_pressed = _jump_pressed
 	state.action_pressed = _action_pressed

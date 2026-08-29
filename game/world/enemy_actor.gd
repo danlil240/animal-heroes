@@ -160,7 +160,10 @@ func _on_body_entered(body: Node2D) -> void:
 		return
 	var peer_id := int(body.get("peer_id"))
 	if try_stomp(body.global_position, (body as CharacterBody2D).velocity, peer_id):
-		(body as CharacterBody2D).velocity.y = -220.0
+		if body.has_method("apply_stomp_rebound"):
+			body.call("apply_stomp_rebound")
+		else:
+			(body as CharacterBody2D).velocity.y = -220.0
 		return
 	try_contact(body)
 

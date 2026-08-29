@@ -4,7 +4,12 @@
 
 [resource]
 script = ExtResource("1_profile")
-move_speed = 220.0
+move_speed = 340.0
+max_run_speed = 340.0
+ground_acceleration = 1400.0
+ground_deceleration = 1800.0
+air_acceleration = 850.0
+jump_cut_gravity_multiplier = 2.4
 jump_speed = 560.0
 max_hearts = 4
 can_push_heavy = true
