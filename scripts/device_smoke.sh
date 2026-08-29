@@ -13,8 +13,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build"
 APK="$BUILD_DIR/animal-heroes-debug.apk"
+APK_CHECKSUM_FILE="$APK.sha256"
 RESULTS_DIR="${SMOKE_RESULTS_DIR:-$ROOT_DIR/docs/test-results}"
-SMOKE_DURATION_SECONDS="${SMOKE_DURATION_SECONDS:-600}"
+DEFAULT_SMOKE_DURATION_SECONDS=600
+SMOKE_DURATION_SECONDS="${SMOKE_DURATION_SECONDS:-$DEFAULT_SMOKE_DURATION_SECONDS}"
 
 source "$SCRIPT_DIR/android_tools.sh"
 resolve_android_tools
@@ -28,8 +30,18 @@ if [[ -z "$HOST_SERIAL" || -z "$CLIENT_SERIAL" ]]; then
   exit 2
 fi
 
+if [[ "$HOST_SERIAL" == "$CLIENT_SERIAL" ]]; then
+  echo "HOST_SERIAL and CLIENT_SERIAL must be different devices." >&2
+  exit 2
+fi
+
 if [[ ! -f "$APK" ]]; then
   echo "APK not found at $APK. Run scripts/build_android.sh first." >&2
+  exit 2
+fi
+
+if [[ ! -f "$APK_CHECKSUM_FILE" ]]; then
+  echo "APK checksum file not found at $APK_CHECKSUM_FILE. Run scripts/build_android.sh first." >&2
   exit 2
 fi
 
@@ -38,7 +50,26 @@ if ! [[ "$SMOKE_DURATION_SECONDS" =~ ^[0-9]+$ ]]; then
   exit 2
 fi
 
+if [[ "$SMOKE_DURATION_SECONDS" != "$DEFAULT_SMOKE_DURATION_SECONDS" ]]; then
+  if [[ "${SMOKE_TEST_MODE:-}" != "1" ]]; then
+    echo "Non-default SMOKE_DURATION_SECONDS requires SMOKE_TEST_MODE=1 and is test-only." >&2
+    exit 2
+  fi
+  if [[ -z "${SMOKE_RESULTS_DIR:-}" || "$RESULTS_DIR" == "$ROOT_DIR/docs/test-results" ]]; then
+    echo "Test-only SMOKE_DURATION_SECONDS requires SMOKE_RESULTS_DIR outside release evidence." >&2
+    exit 2
+  fi
+fi
+
 mkdir -p "$RESULTS_DIR"
+
+if ! sha256sum --check "$APK_CHECKSUM_FILE"; then
+  echo "APK checksum verification failed; do not install or record device evidence." >&2
+  exit 2
+fi
+APK_SHA256="$(sha256sum "$APK" | awk '{print $1}')"
+printf '%s\n' "$APK_SHA256" > "$RESULTS_DIR/apk-sha256.txt"
+printf '%s\n' "$SMOKE_DURATION_SECONDS" > "$RESULTS_DIR/run-duration-seconds.txt"
 
 require_sm_t220() {
   local role="$1"
@@ -69,7 +100,7 @@ echo "=== Device check ==="
 require_sm_t220 "host" "$HOST_SERIAL"
 require_sm_t220 "client" "$CLIENT_SERIAL"
 
-echo "=== Installing APK on both tablets ==="
+echo "=== Installing checksum-verified APK on both tablets ==="
 "$ADB_BIN" -s "$HOST_SERIAL" install -r "$APK"
 "$ADB_BIN" -s "$CLIENT_SERIAL" install -r "$APK"
 
@@ -91,7 +122,11 @@ echo "=== Launching client ==="
 sleep 3
 "$ADB_BIN" -s "$CLIENT_SERIAL" shell am start -n org.danlil.animalheroes/org.godotengine.godot.GodotApp
 
-echo "=== Operator-driven 10-minute gameplay interval ==="
+if [[ "$SMOKE_DURATION_SECONDS" == "$DEFAULT_SMOKE_DURATION_SECONDS" ]]; then
+  echo "=== Operator-driven 10-minute gameplay interval (600 seconds) ==="
+else
+  echo "=== TEST ONLY: operator-driven ${SMOKE_DURATION_SECONDS}-second gameplay interval ==="
+fi
 echo "On both tablets, host/join the game and traverse Cloud Factory during this interval."
 echo "Launching the app processes does not automatically perform gameplay."
 sleep "$SMOKE_DURATION_SECONDS"
