@@ -8,6 +8,8 @@ SMOKE_SCRIPT="$ROOT_DIR/scripts/device_smoke.sh"
 TEMP_DIR="$(mktemp -d)"
 SDK_DIR="$TEMP_DIR/sdk"
 RESULTS_DIR="$TEMP_DIR/results"
+RELEASE_RESULTS_DIR="$ROOT_DIR/docs/test-results"
+RELEASE_RESULTS_SNAPSHOT="$TEMP_DIR/release-results.snapshot"
 ADB_LOG="$TEMP_DIR/adb.log"
 EVENT_LOG="$TEMP_DIR/events.log"
 REAL_SHA256SUM="$(command -v sha256sum)"
@@ -18,6 +20,7 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$SDK_DIR/platform-tools" "$SDK_DIR/build-tools/1.0.0" "$TEMP_DIR/bin"
+find "$RELEASE_RESULTS_DIR" -maxdepth 1 -type f -print | sort > "$RELEASE_RESULTS_SNAPSHOT"
 
 cat > "$SDK_DIR/platform-tools/adb" <<'EOF'
 #!/usr/bin/env bash
@@ -285,5 +288,10 @@ if [[ "$(<"$RESULTS_DIR/run-duration-seconds.txt")" != "0" ]]; then
   echo "FAIL: results did not record the actual test duration" >&2
   exit 1
 fi
+if ! cmp -s "$RELEASE_RESULTS_SNAPSHOT" <(find "$RELEASE_RESULTS_DIR" -maxdepth 1 -type f -print | sort); then
+  echo "FAIL: fake-device test populated repository release results" >&2
+  diff -u "$RELEASE_RESULTS_SNAPSHOT" <(find "$RELEASE_RESULTS_DIR" -maxdepth 1 -type f -print | sort) >&2 || true
+  exit 1
+fi
 
-echo "PASS: checksum, ordered before/after captures, launches, and actual duration are recorded"
+echo "PASS: checksum, ordered before/after captures, launches, actual duration, and results isolation are recorded"
