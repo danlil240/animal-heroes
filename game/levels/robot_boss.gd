@@ -8,6 +8,8 @@ const RobotBoss = preload("res://world/robot_boss.gd")
 
 var boss: RobotBoss = null
 
+@onready var _boss_overlay = $HUD/BossStatusOverlay
+
 
 func _setup_coop_level() -> void:
 	boss = RobotBoss.new()
@@ -17,6 +19,7 @@ func _setup_coop_level() -> void:
 
 func _step_level(delta: float) -> void:
 	boss.host_step(delta)
+	_boss_overlay.render(boss.phase, boss.cycle_count, RobotBoss.PHASE_TIME_LIMIT - boss.phase_timer)
 
 
 func activate_switch(switch_id: int) -> void:

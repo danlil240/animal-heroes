@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://levels/robot_boss.gd" id="1_boss"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -10,6 +10,8 @@
 [ext_resource type="PackedScene" path="res://visual/cloud_factory_background.tscn" id="8_background"]
 [ext_resource type="PackedScene" path="res://visual/hero_visual.tscn" id="9_hero_visual"]
 [ext_resource type="PackedScene" path="res://visual/boss_visual.tscn" id="10_boss_visual"]
+[ext_resource type="PackedScene" path="res://ui/gameplay_hud.tscn" id="11_gameplay_hud"]
+[ext_resource type="PackedScene" path="res://ui/boss_status_overlay.tscn" id="12_boss_overlay"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(1600, 80)
@@ -108,6 +110,10 @@ limit_bottom = 800
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="TouchControls" parent="HUD" instance=ExtResource("5_touch")]
+
+[node name="GameplayHud" parent="HUD" instance=ExtResource("11_gameplay_hud")]
+
+[node name="BossStatusOverlay" parent="HUD" instance=ExtResource("12_boss_overlay")]
 
 [node name="PartnerIndicator" type="Control" parent="HUD"]
 layout_mode = 0

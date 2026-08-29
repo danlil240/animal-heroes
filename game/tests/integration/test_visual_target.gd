@@ -50,6 +50,8 @@ func _run() -> void:
 		return
 	if not await _test_coop_hud_presence():
 		return
+	if not await _test_boss_overlay_presence():
+		return
 	if not _test_complete_arena_composition():
 		return
 	if not await _test_ground_art_covers_collider():
@@ -247,6 +249,21 @@ func _test_coop_hud_presence() -> bool:
 			level.queue_free()
 			return _fail_bool("%s GameplayHud must expose render()" % level_path.get_file())
 		level.queue_free()
+	return true
+
+
+func _test_boss_overlay_presence() -> bool:
+	var level = load("res://levels/robot_boss.tscn").instantiate()
+	root.add_child(level)
+	await process_frame
+	var overlay = level.get_node_or_null("HUD/BossStatusOverlay")
+	if overlay == null:
+		level.queue_free()
+		return _fail_bool("robot_boss must compose the BossStatusOverlay")
+	if not overlay.has_method("render"):
+		level.queue_free()
+		return _fail_bool("BossStatusOverlay must expose render()")
+	level.queue_free()
 	return true
 
 
