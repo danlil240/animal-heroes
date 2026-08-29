@@ -8,6 +8,9 @@ func _init() -> void:
 	_test_interactable_host_authority()
 	_test_coop_mode_checkpoint_confirmation()
 	_test_invalid_remote_activation_rejected()
+	_test_team_score_rejects_duplicate_events()
+	_test_team_score_snapshot_round_trip()
+	_test_bubble_inventory_is_bounded_and_consumable()
 	quit(0)
 
 
@@ -180,6 +183,80 @@ func _test_invalid_remote_activation_rejected() -> void:
 		return
 	interactable.queue_free()
 	player.queue_free()
+
+
+## Catches a repeated overlap or replayed world event awarding points twice.
+func _test_team_score_rejects_duplicate_events() -> void:
+	var score_script = load("res://core/team_score.gd")
+	if score_script == null:
+		_fail("team score rules must exist")
+		return
+	var score = score_script.new()
+	if score.award("star-1", "star") != 10:
+		_fail("first star must add exactly 10")
+		return
+	if score.award("star-1", "star") != 0 or score.total != 10:
+		_fail("duplicate event ids must not score twice")
+		return
+	if score.award("enemy-1", "enemy") != 25:
+		_fail("enemy must add exactly 25")
+		return
+	if score.award("gate-1", "teamwork") != 100 or score.total != 135:
+		_fail("teamwork must add exactly 100")
+		return
+	if score.award("unknown-1", "unknown") != 0 or score.total != 135:
+		_fail("unknown score categories must not change the total")
+
+
+## Catches reconnect restoration losing the total or duplicate-event history.
+func _test_team_score_snapshot_round_trip() -> void:
+	var score_script = load("res://core/team_score.gd")
+	if score_script == null:
+		_fail("team score rules must exist")
+		return
+	var original = score_script.new()
+	original.award("star-1", "star")
+	original.award("enemy-1", "enemy")
+	var restored = score_script.new()
+	if not restored.restore(original.snapshot()) or restored.total != 35:
+		_fail("score snapshot must round trip")
+		return
+	if restored.award("enemy-1", "enemy") != 0 or restored.total != 35:
+		_fail("restored score must retain duplicate-event history")
+		return
+	if restored.restore({"total": -1, "awarded_ids": []}):
+		_fail("negative restored totals must be rejected")
+
+
+## Catches a bubble flower granting unbounded shots or empty ammo still firing.
+func _test_bubble_inventory_is_bounded_and_consumable() -> void:
+	var inventory_script = load("res://player/bubble_inventory.gd")
+	if inventory_script == null:
+		_fail("bubble inventory rules must exist")
+		return
+	var inventory = inventory_script.new()
+	if inventory.grant(1) != 5 or inventory.remaining(1) != 5:
+		_fail("default bubble flower must grant five shots")
+		return
+	if inventory.grant(1, 50) != 5:
+		_fail("bubble inventory must clamp to five shots")
+		return
+	for index in 5:
+		if not inventory.consume(1):
+			_fail("granted bubble shot %d must be consumable" % index)
+			return
+	if inventory.consume(1) or inventory.remaining(1) != 0:
+		_fail("empty bubble inventory must reject consumption")
+		return
+	if inventory.grant(0) != 0 or inventory.remaining(0) != 0:
+		_fail("invalid peer ids must not receive bubble ammunition")
+		return
+	var restored = inventory_script.new()
+	if not restored.restore({1: 4, 2: 2}):
+		_fail("valid bubble inventory snapshot must restore")
+		return
+	if restored.remaining(1) != 4 or restored.remaining(2) != 2:
+		_fail("bubble inventory snapshot must preserve each peer count")
 
 
 func _make_player_body(peer_id: int) -> Node:
