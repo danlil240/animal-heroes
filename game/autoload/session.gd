@@ -70,13 +70,36 @@ func tick(delta: float) -> void:
 	if state == PLAYING and not _paused:
 		_traffic_timer += step
 		if _traffic_timer >= TRAFFIC_TIMEOUT:
-			_begin_reconnect()
+			if _peer_is_alive():
+				notify_traffic()
+			else:
+				_begin_reconnect()
 	if _reconnect.state == ReconnectController.RETRYING:
 		_reconnect.tick(step)
 	if _resume_countdown_remaining > 0.0:
 		_resume_countdown_remaining -= step
 		if _resume_countdown_remaining <= 0.0:
 			_complete_resume()
+
+
+func _peer_is_alive() -> bool:
+	if _peer == null:
+		return false
+	if _is_host:
+		for peer_id in _characters_by_peer:
+			if peer_id == 1:
+				continue
+			var packet_peer := _peer.get_peer(peer_id)
+			if packet_peer == null:
+				return false
+			if packet_peer.get_state() != ENetPacketPeer.STATE_CONNECTED:
+				return false
+		return _characters_by_peer.size() > 1
+	else:
+		var packet_peer := _peer.get_peer(1)
+		if packet_peer == null:
+			return false
+		return packet_peer.get_state() == ENetPacketPeer.STATE_CONNECTED
 
 
 func create_game() -> Error:

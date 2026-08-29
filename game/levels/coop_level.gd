@@ -11,6 +11,7 @@ const CoopModeScript := preload("res://modes/coop_mode.gd")
 @export var level_id: String = ""
 
 var coop_mode: RefCounted = null
+var _collected_stars: int = 0
 
 
 func _setup_level() -> void:
@@ -23,6 +24,9 @@ func _setup_level() -> void:
 	for checkpoint in get_tree().get_nodes_in_group("checkpoint"):
 		if checkpoint.has_signal("activated"):
 			checkpoint.activated.connect(_on_checkpoint_activated)
+	for collectible in get_tree().get_nodes_in_group("collectible"):
+		if collectible is Area2D and collectible.has_signal("body_entered"):
+			collectible.body_entered.connect(_on_collectible_entered.bind(collectible))
 	_setup_coop_level()
 
 
@@ -54,6 +58,15 @@ func _on_checkpoint_activated(checkpoint_id: String, _peer_id: int) -> void:
 		hero.checkpoint_position = checkpoint_position
 
 
+func _on_collectible_entered(body: Node2D, collectible: Area2D) -> void:
+	if not body.has_method("respawn"):
+		return
+	if collectible.is_queued_for_deletion():
+		return
+	_collected_stars += 1
+	collectible.queue_free()
+
+
 func _checkpoint_position(checkpoint_id: String) -> Vector2:
 	for checkpoint in get_tree().get_nodes_in_group("checkpoint"):
 		if checkpoint.get("checkpoint_id") == checkpoint_id:
@@ -70,6 +83,7 @@ func _on_coop_level_completed(completed_level_id: String) -> void:
 		"campaign_completed": coop_mode.is_campaign_completed(),
 		"winner_peer_id": 0,
 		"scores": {},
+		"stars_collected": _collected_stars,
 	})
 
 

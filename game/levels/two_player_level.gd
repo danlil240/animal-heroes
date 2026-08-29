@@ -27,6 +27,9 @@ const REMOTE_KEY_ACTIONS := {
 	KEY_O: "action",
 }
 
+const NET_SYNC_HZ: float = 20.0
+const _NET_SYNC_INTERVAL: float = 1.0 / NET_SYNC_HZ
+
 @onready var rabbit = $Rabbit
 @onready var fox = $Fox
 @onready var rabbit_camera: Camera2D = $Rabbit/Camera2D
@@ -39,6 +42,9 @@ var local_role: String = RABBIT_ROLE
 var _background: Node2D = null
 var _remote_keys := {"left": false, "right": false, "jump": false, "action": false}
 var _finished: bool = false
+var _net_sync_accumulator: float = 0.0
+var _remote_input_frame = null
+var _has_remote_input: bool = false
 
 
 func _ready() -> void:
@@ -56,6 +62,10 @@ func _physics_process(delta: float) -> void:
 	_step_level(delta)
 	route_control_frames()
 	apply_remote_desktop_frame(_desktop_remote_frame())
+	_net_sync_accumulator += delta
+	if _net_sync_accumulator >= _NET_SYNC_INTERVAL:
+		_net_sync_accumulator = 0.0
+		_sync_over_network()
 
 
 func _process(delta: float) -> void:
@@ -79,6 +89,11 @@ func configure_local_role(role: String) -> void:
 		rabbit_camera.make_current()
 	else:
 		fox_camera.make_current()
+	# The local hero always simulates. The partner keeps simulating too until
+	# network state actually arrives, so offline play, the local arena, and the
+	# desktop keyboard second player all still move under their own physics.
+	_local_hero().is_network_remote = false
+	_remote_hero().is_network_remote = _has_remote_input
 	partner_indicator.update_for_world_positions(_local_hero().global_position, _remote_hero().global_position)
 
 
@@ -88,7 +103,37 @@ func route_control_frames() -> void:
 
 
 func apply_remote_desktop_frame(frame) -> void:
-	_remote_hero().apply_input(frame)
+	if not _has_remote_input:
+		_remote_hero().apply_input(frame)
+
+
+## Sends the local hero's input frame and position to the other tablet via RPC.
+func _sync_over_network() -> void:
+	var session = get_node_or_null("/root/Session")
+	if session == null or session.state != Session.PLAYING:
+		return
+	if session._peer == null:
+		return
+	var frame: PlayerInputScript.InputFrame = touch_controls.input_frame()
+	var pos: Vector2 = _local_hero().global_position
+	var vel: Vector2 = _local_hero().velocity
+	_receive_remote_state.rpc(frame.axis, frame.jump, frame.action, pos, vel)
+
+
+@rpc("any_peer", "unreliable_ordered")
+func _receive_remote_state(axis: float, jump: bool, action: bool, pos: Vector2, vel: Vector2) -> void:
+	var remote: CharacterBody2D = _remote_hero()
+	# The partner is owned by the other tablet from this point on. Hand it over
+	# to network state so local gravity stops fighting the incoming position.
+	_has_remote_input = true
+	remote.is_network_remote = true
+	# Apply the owner's authoritative state directly instead of local physics.
+	if remote.has_method("apply_network_state"):
+		remote.apply_network_state(pos, vel, axis, jump, action)
+	else:
+		# Fallback for non-PlayerBody heroes
+		remote.global_position = pos
+		remote.velocity = vel
 
 
 ## Announces the end of the level or match exactly once.

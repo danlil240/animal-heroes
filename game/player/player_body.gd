@@ -14,6 +14,9 @@ const TIMER_EPSILON: float = 0.000001
 @export var peer_id: int = 0
 @export var gravity: float = 1200.0
 
+## When true, this body is driven by network state and skips local physics.
+var is_network_remote: bool = false
+
 var hearts: int = 0
 var checkpoint_position: Vector2 = Vector2.ZERO
 var facing_direction: float = 1.0
@@ -35,6 +38,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if is_network_remote:
+		return
 	physics_step(delta)
 
 
@@ -102,6 +107,19 @@ func consume_action() -> bool:
 	var was_buffered := _action_buffered
 	_action_buffered = false
 	return was_buffered
+
+
+## Applies authoritative network state for a remote-controlled hero.
+## Skips local physics; the owner's position and velocity are trusted directly.
+func apply_network_state(pos: Vector2, vel: Vector2, axis: float, jump: bool, action: bool) -> void:
+	_ensure_initialized()
+	if absf(axis) > 0.01:
+		facing_direction = signf(axis)
+	global_position = pos
+	velocity = vel
+	_input_axis = axis
+	_jump_pressed = jump
+	_action_pressed = action
 
 
 func snapshot() -> PlayerStateScript:
