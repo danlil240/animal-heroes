@@ -271,8 +271,8 @@ func _test_bubble_inventory_tracks_powered_spread_shots() -> void:
 	if inventory.consume_spread(1) or inventory.kind(1) != "basic" or inventory.remaining(1) != 0:
 		_fail("exhausted spread charges must return to unlimited basic fire")
 		return
-	if inventory.grant(1) != 5 or inventory.consume(1) == false or inventory.remaining(1) != 4:
-		_fail("legacy grant and consume wrappers must retain five-charge caller behavior")
+	if inventory.grant(1) != 10 or inventory.consume(1) == false or inventory.remaining(1) != 9:
+		_fail("legacy grant and consume wrappers must follow the ten-charge spread contract")
 		return
 	var restored = inventory_script.new()
 	if not restored.restore({1: {"kind": "spread", "remaining": 4}, 2: {"kind": "basic", "remaining": 0}}):

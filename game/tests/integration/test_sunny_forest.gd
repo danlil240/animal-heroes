@@ -140,11 +140,11 @@ func _test_role_gated_fallen_log(level: Node) -> bool:
 	return true
 
 
-## Catches bubble pickup not granting five, firing not consuming one, or the
+## Catches bubble pickup not granting ten, firing not consuming one, or the
 ## active projectile budget growing beyond six.
 func _test_bubble_inventory_and_pool(level: Node) -> bool:
-	if level.grant_bubbles(1) != 5:
-		_fail("bubble flower must grant five shots")
+	if level.grant_bubbles(1) != 10:
+		_fail("bubble flower must grant ten spread shots")
 		return false
 	var rabbit = level.get_node("Rabbit")
 	rabbit.global_position = Vector2(400, 640)
@@ -156,18 +156,15 @@ func _test_bubble_inventory_and_pool(level: Node) -> bool:
 	if level.active_bubble_count() != 1:
 		_fail("context action with no nearby object must fire a bubble")
 		return false
-	if level.bubble_ammo.remaining(1) != 4 or level.active_bubble_count() != 1:
+	if level.bubble_ammo.remaining(1) != 9 or level.active_bubble_count() != 1:
 		_fail("bubble fire must consume one shot and activate one projectile")
 		return false
-	for shot in 4:
+	for shot in 5:
 		if not level.fire_bubble(1, Vector2(1800, 620), 1.0):
-			_fail("remaining granted bubble shot %d must fire" % shot)
+			_fail("remaining spread shot %d must fire" % shot)
 			return false
-	if level.fire_bubble(1, Vector2(1800, 620), 1.0):
-		_fail("empty bubble inventory must reject firing")
-		return false
-	if level.active_bubble_count() != 5:
-		_fail("five granted shots must produce five active bounded projectiles")
+	if level.bubble_ammo.remaining(1) != 4 or level.active_bubble_count() != 6:
+		_fail("ten granted shots must leave four charges after six bounded projectiles")
 		return false
 	return true
 
@@ -191,7 +188,7 @@ func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
 		if not world_snapshot.has(required_key):
 			_fail("Sunny Forest reconnect snapshot is missing %s" % required_key)
 			return false
-	if world_snapshot.get("enemies", []).size() < 4 or world_snapshot.get("projectiles", []).size() != 5:
+	if world_snapshot.get("enemies", []).size() < 4 or world_snapshot.get("projectiles", []).size() != 6:
 		_fail("snapshot must include enemy and active bubble world state")
 		return false
 	level.register_enemy_defeat("after-snapshot", 1)
@@ -199,7 +196,7 @@ func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
 	if not level.restore_world_state(world_snapshot):
 		_fail("valid Sunny Forest world snapshot must restore")
 		return false
-	if level.team_score.total != 235 or level.bubble_ammo.remaining(1) != 0 or level.active_bubble_count() != 5:
+	if level.team_score.total != 235 or level.bubble_ammo.remaining(1) != 4 or level.active_bubble_count() != 6:
 		_fail("snapshot restore must replace score, ammo, and active projectiles")
 		return false
 	var results: Array[Dictionary] = []

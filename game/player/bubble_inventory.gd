@@ -7,7 +7,6 @@ extends RefCounted
 const BASIC: String = "basic"
 const SPREAD: String = "spread"
 const MAX_POWERED_SHOTS: int = 10
-const LEGACY_GRANT_AMOUNT: int = 5
 
 var _powered: Dictionary = {}
 
@@ -49,8 +48,8 @@ func remaining(peer_id: int) -> int:
 
 
 ## Compatibility for the pre-powered Sunny Forest flow. New callers should use
-## grant_spread(), whose default fills all ten powered charges.
-func grant(peer_id: int, amount: int = LEGACY_GRANT_AMOUNT) -> int:
+## grant_spread(), but the legacy name now follows the ten-charge contract too.
+func grant(peer_id: int, amount: int = MAX_POWERED_SHOTS) -> int:
 	return grant_spread(peer_id, amount)
 
 
