@@ -37,6 +37,11 @@ class StatePaths:
         )
 
     @classmethod
+    def default(cls) -> "StatePaths":
+        import os as _os
+        return cls.resolve(dict(_os.environ), _os.getuid())
+
+    @classmethod
     def for_test(cls, root: Path) -> "StatePaths":
         root = root.resolve(strict=False)
         return cls(
