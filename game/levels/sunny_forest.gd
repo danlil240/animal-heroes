@@ -69,7 +69,7 @@ func register_enemy_defeat(enemy_id: String, _peer_id: int) -> bool:
 	var points: int = team_score.award("enemy:%s" % enemy_id, "enemy")
 	if points <= 0:
 		return false
-	AudioDirector.play_gameplay_cue("enemy")
+	AudioDirector.play_gameplay_cue("enemy_defeat", _peer_id)
 	_show_score_gain(points, Vector2.ZERO)
 	_render_gameplay_hud()
 	return true
@@ -158,13 +158,7 @@ func world_state_snapshot() -> Dictionary:
 	var enemies: Array[Dictionary] = []
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy is EnemyActor:
-			enemies.append({
-				"enemy_id": String(enemy.enemy_id),
-				"enemy_kind": String(enemy.enemy_kind),
-				"motion_state": String(enemy.motion_state),
-				"position": enemy.position,
-				"velocity": enemy.velocity,
-			})
+			enemies.append(enemy.snapshot_state())
 	var gates: Dictionary = {}
 	for gate_id in _gates:
 		gates[gate_id] = _gates[gate_id].snapshot()
@@ -234,7 +228,8 @@ func _restore_enemy_state(enemies_data: Variant) -> bool:
 			by_id[String(entry.get("enemy_id", ""))] = entry
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy is EnemyActor and by_id.has(String(enemy.enemy_id)):
-			enemy.restore_state(by_id[String(enemy.enemy_id)])
+			if not enemy.restore_state(by_id[String(enemy.enemy_id)]):
+				return false
 	return true
 
 
@@ -364,7 +359,7 @@ func _on_enemy_player_hit(_enemy_id: String, peer_id: int) -> void:
 
 
 func _on_bubble_enemy_hit(enemy_id: String, peer_id: int, _projectile_id: String) -> void:
-	register_enemy_defeat(enemy_id, peer_id)
+	AudioDirector.play_gameplay_cue("enemy_hit", peer_id)
 
 
 func _on_bubble_released(bubble: Node) -> void:

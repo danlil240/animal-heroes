@@ -14,6 +14,7 @@ const SPREAD: String = "spread"
 const BASIC_VISUAL_SCALE := Vector2(0.42, 0.42)
 const SPREAD_VISUAL_SCALE := Vector2(0.52, 0.52)
 const SPREAD_TINT := Color("9ce7ff")
+const MAX_HIT_IMPULSE: float = 180.0
 
 var active: bool = false
 var owner_peer_id: int = 0
@@ -63,7 +64,7 @@ func host_step(delta: float) -> void:
 func try_enemy_hit(enemy: Node) -> bool:
 	if not active or enemy == null or not enemy.has_method("try_bubble"):
 		return false
-	if not bool(enemy.try_bubble(owner_peer_id)):
+	if not bool(enemy.try_bubble(owner_peer_id, velocity.limit_length(MAX_HIT_IMPULSE))):
 		return false
 	var enemy_id := String(enemy.get("enemy_id"))
 	enemy_hit.emit(enemy_id, owner_peer_id, projectile_id)

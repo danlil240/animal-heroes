@@ -27,6 +27,7 @@ func _init() -> void:
 	_test_interactable_character_eligibility()
 	_test_beetle_actor_patrol_contact_and_stomp()
 	_test_seed_actor_telegraphs_hops_and_accepts_bubble()
+	_test_enemy_durability_recoil_and_snapshot()
 	_test_bubble_projectile_launch_move_hit_and_expire()
 	_test_bubble_projectile_pool_is_bounded_and_resets()
 	_test_teamwork_gate_requires_unique_known_parts()
@@ -420,7 +421,7 @@ func _test_beetle_actor_patrol_contact_and_stomp() -> void:
 		_fail("enemy body overlap must route a descending hero to stomp logic")
 
 
-## Catches the seed jumping without warning or bubbles failing to defeat it.
+## Catches the seed jumping without warning or a one-hit seed surviving a bubble.
 func _test_seed_actor_telegraphs_hops_and_accepts_bubble() -> void:
 	var scene: PackedScene = load("res://world/seed_enemy.tscn")
 	if scene == null:
@@ -443,11 +444,60 @@ func _test_seed_actor_telegraphs_hops_and_accepts_bubble() -> void:
 	if seed.motion_state != seed.HOP or seed.velocity.y >= 0.0:
 		_fail("seed hop must begin with upward velocity after telegraph")
 		return
-	if not seed.try_bubble(2) or seed.motion_state != seed.DEFEATED:
+	if not seed.try_bubble(2, Vector2(120.0, -40.0)) or seed.motion_state != seed.DEFEATED:
 		_fail("one bubble hit must defeat the hopping seed")
 		return
-	if seed.try_bubble(2):
+	if seed.try_bubble(2, Vector2.ZERO):
 		_fail("defeated seed must reject repeated bubble hits")
+
+
+## Catches a beetle being defeated by one hit, accepting fan-member duplicates,
+## unbounded recoil, or reconnect restoration mutating partial enemy state.
+func _test_enemy_durability_recoil_and_snapshot() -> void:
+	var beetle = load("res://world/beetle_enemy.tscn").instantiate()
+	beetle.enemy_id = "durable-beetle"
+	root.add_child(beetle)
+	var defeats: Array[int] = []
+	var hurts: Array[int] = []
+	beetle.defeated.connect(func(_id: String, _peer: int) -> void: defeats.append(1))
+	beetle.hurt.connect(func(_id: String, _peer: int) -> void: hurts.append(1))
+	if not beetle.try_bubble(1, Vector2(1200.0, -400.0)):
+		_fail("first beetle hit must be accepted")
+		return
+	if beetle.health != 1 or beetle.motion_state == beetle.DEFEATED or hurts.size() != 1:
+		_fail("first beetle hit must damage once without defeating")
+		return
+	if beetle.velocity.length() > 180.01:
+		_fail("enemy hit recoil must be clamped to 180 pixels per second")
+		return
+	if beetle.try_bubble(1, Vector2.ZERO):
+		_fail("hurt cooldown must reject simultaneous fan-member hit")
+		return
+	beetle.host_step(beetle.HURT_COOLDOWN + 0.01)
+	if not beetle.try_bubble(1, Vector2.ZERO) or defeats.size() != 1:
+		_fail("second separated beetle hit must defeat once")
+		return
+	var restored = load("res://world/beetle_enemy.tscn").instantiate()
+	restored.enemy_id = "restored-beetle"
+	root.add_child(restored)
+	var restored_hurts: Array[int] = []
+	var restored_defeats: Array[int] = []
+	restored.hurt.connect(func(_id: String, _peer: int) -> void: restored_hurts.append(1))
+	restored.defeated.connect(func(_id: String, _peer: int) -> void: restored_defeats.append(1))
+	var snapshot: Dictionary = beetle.snapshot_state()
+	snapshot["enemy_id"] = "restored-beetle"
+	if not restored.restore_state(snapshot):
+		_fail("complete enemy snapshot must restore")
+		return
+	if restored.health != 0 or restored.motion_state != restored.DEFEATED or not restored_hurts.is_empty() or not restored_defeats.is_empty():
+		_fail("enemy restore must apply defeat state without gameplay signals")
+		return
+	var before: Dictionary = restored.snapshot_state()
+	if restored.restore_state({"enemy_id": "restored-beetle", "motion_state": "patrol"}):
+		_fail("partial enemy snapshots must be rejected")
+		return
+	if restored.snapshot_state() != before:
+		_fail("failed enemy restore must not mutate the current state")
 
 
 ## Catches invalid shots becoming active, projectile motion drifting from the

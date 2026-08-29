@@ -56,6 +56,8 @@ func _run() -> void:
 		return
 	if not _test_platforms_are_reachable(level):
 		return
+	if not _test_projectile_hit_does_not_score_until_defeat(level):
+		return
 	if not _test_authoritative_star_and_enemy_score(level):
 		return
 	if not _test_role_gated_fallen_log(level):
@@ -110,6 +112,16 @@ func _test_authoritative_star_and_enemy_score(level: Node) -> bool:
 		return false
 	if level.register_enemy_defeat("beetle-meadow-1", 2) or level.team_score.total != 35:
 		_fail("duplicate enemy defeat must not score twice")
+		return false
+	return true
+
+
+## Catches an accepted non-lethal bubble hit being counted as an enemy defeat.
+func _test_projectile_hit_does_not_score_until_defeat(level: Node) -> bool:
+	var before: int = level.team_score.total
+	level._on_bubble_enemy_hit("beetle-meadow-1", 1, "bubble-feedback-test")
+	if level.team_score.total != before:
+		_fail("non-lethal bubble hits must not award enemy defeat points")
 		return false
 	return true
 
@@ -191,6 +203,11 @@ func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
 	if world_snapshot.get("enemies", []).size() < 4 or world_snapshot.get("projectiles", []).size() != 6:
 		_fail("snapshot must include enemy and active bubble world state")
 		return false
+	var enemy_snapshot: Dictionary = world_snapshot.get("enemies", [])[0]
+	for required_enemy_key in ["enemy_id", "enemy_kind", "motion_state", "health", "hurt_remaining", "position", "velocity", "direction"]:
+		if not enemy_snapshot.has(required_enemy_key):
+			_fail("enemy snapshot must include durable state key %s" % required_enemy_key)
+			return false
 	level.register_enemy_defeat("after-snapshot", 1)
 	level.grant_bubbles(1)
 	if not level.restore_world_state(world_snapshot):
