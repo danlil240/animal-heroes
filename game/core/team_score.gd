@@ -7,16 +7,17 @@ const VALUES := {
 	"star": 10,
 	"enemy": 25,
 	"teamwork": 100,
+	"secret": 100,
 }
 
 var total: int = 0
 var _awarded_ids: Dictionary = {}
 
 
-func award(event_id: String, category: String) -> int:
+func award(event_id: String, category: String, multiplier: int = 1) -> int:
 	if event_id.is_empty() or _awarded_ids.has(event_id) or not VALUES.has(category):
 		return 0
-	var points: int = int(VALUES[category])
+	var points: int = int(VALUES[category]) * clampi(multiplier, 1, 4)
 	_awarded_ids[event_id] = true
 	total += points
 	return points

@@ -131,6 +131,12 @@ const LEVEL_MUSIC := {
 const GAMEPLAY_CUES := {
 	"star": false,
 	"enemy": false,
+	"shot": true,
+	"enemy_hit": false,
+	"enemy_defeat": false,
+	"spring": false,
+	"combo": false,
+	"secret": false,
 	"teamwork": false,
 	"damage": false,
 	"checkpoint": false,

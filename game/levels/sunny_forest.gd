@@ -10,6 +10,9 @@ const BubbleProjectileScene := preload("res://world/bubble_projectile.tscn")
 const ActionResolverScript := preload("res://player/action_resolver.gd")
 
 const INTERACTION_DISTANCE: float = 96.0
+const FIRE_INTERVAL: float = 0.20
+const BASIC_SHOT_VELOCITY: float = 360.0
+const SPREAD_VERTICAL_VELOCITIES: Array[float] = [-70.0, 0.0, 70.0]
 
 @onready var exit_node: Area2D = $Exit
 
@@ -20,6 +23,10 @@ var _bubble_pool: RefCounted = null
 var _bubble_sequence: int = 0
 var _offline_action_sequences: Dictionary = {1: 1000, 2: 1000}
 var _action_resolver: RefCounted = null
+var _previous_action_held: Dictionary = {1: false, 2: false}
+var _fire_remaining: Dictionary = {1: 0.0, 2: 0.0}
+var _interaction_claims: Dictionary = {}
+var _pool_exhaustion_reported: bool = false
 
 
 func _setup_coop_level() -> void:
@@ -45,9 +52,9 @@ func _step_level(delta: float) -> void:
 		for bubble in get_tree().get_nodes_in_group("active_bubble"):
 			if bubble.has_method("host_step"):
 				bubble.host_step(delta)
+		_step_authoritative_actions(delta)
 	for hero in [rabbit, fox]:
-		if hero.consume_action():
-			_perform_context_action(hero)
+		hero.consume_action()
 	_render_gameplay_hud()
 
 
@@ -59,36 +66,40 @@ func _present_level(_delta: float) -> void:
 	var target = _action_resolver.select(hero, get_tree().get_nodes_in_group("sunny_interactable"), INTERACTION_DISTANCE)
 	if target != null:
 		hud.show_context(String(target.interaction_kind))
-	elif bubble_ammo.remaining(int(hero.get("peer_id"))) > 0:
-		hud.show_context("bubble")
 	else:
-		hud.hide_context()
+		hud.show_context("bubble")
 
 
-func register_enemy_defeat(enemy_id: String, _peer_id: int) -> bool:
-	var points: int = team_score.award("enemy:%s" % enemy_id, "enemy")
+func register_enemy_defeat(enemy_id: String, _peer_id: int, score_payload: Dictionary = {}) -> bool:
+	var event_id := "enemy:%s" % enemy_id
+	var points: int = _award_authoritative_score(event_id, "enemy", score_payload) if not score_payload.is_empty() else _award_combo_score(event_id, "enemy")
 	if points <= 0:
 		return false
-	AudioDirector.play_gameplay_cue("enemy")
+	AudioDirector.play_gameplay_cue("enemy_defeat", _peer_id)
 	_show_score_gain(points, Vector2.ZERO)
 	_render_gameplay_hud()
 	return true
 
 
-func activate_teamwork_part(gate_id: String, part_id: String, peer_id: int) -> bool:
+func activate_teamwork_part(gate_id: String, part_id: String, peer_id: int, score_payload: Dictionary = {}) -> bool:
 	if not _gates.has(gate_id):
 		return false
 	var gate = _gates[gate_id]
 	if gate_id == "bubble-grove" and gate.snapshot().get("active_parts", {}).values().has(peer_id):
 		return false
-	if not gate.mark_part(part_id, peer_id):
+	var before: Dictionary = gate.snapshot()
+	var completed: bool = gate.mark_part(part_id, peer_id)
+	if gate.snapshot() == before:
 		return false
-	var points: int = team_score.award("gate:%s" % gate_id, "teamwork")
-	AudioDirector.play_gameplay_cue("teamwork")
-	_open_gate_barrier(gate_id)
-	_show_score_gain(points, Vector2.ZERO)
+	var event_id := "gate:%s" % gate_id
+	var points: int = _award_authoritative_score(event_id, "teamwork", score_payload) if not score_payload.is_empty() else _award_teamwork_score(event_id)
+	if points > 0:
+		AudioDirector.play_gameplay_cue("teamwork")
+		_show_score_gain(points, Vector2.ZERO)
+	if completed:
+		_open_gate_barrier(gate_id)
 	_render_gameplay_hud()
-	return true
+	return completed
 
 
 func gate_is_open(gate_id: String) -> bool:
@@ -102,22 +113,40 @@ func grant_bubbles(peer_id: int) -> int:
 
 
 func fire_bubble(peer_id: int, origin: Vector2, direction: float) -> bool:
-	if bubble_ammo.remaining(peer_id) <= 0:
+	if peer_id not in [1, 2] or absf(direction) < 0.001:
 		return false
-	var bubble = _bubble_pool.acquire()
-	if bubble == null:
-		return false
+	var kind: String = bubble_ammo.kind(peer_id)
+	var fan_velocities: Array = SPREAD_VERTICAL_VELOCITIES if kind == BubbleInventoryScript.SPREAD else [0.0]
+	var acquired: Array[Node] = []
+	for _vertical_velocity in fan_velocities:
+		var bubble = _bubble_pool.acquire()
+		if bubble == null:
+			for partial in acquired:
+				_bubble_pool.release(partial)
+			_report_pool_exhaustion_once()
+			return false
+		acquired.append(bubble)
 	_bubble_sequence += 1
-	$Bubbles.add_child(bubble)
-	bubble.add_to_group("active_bubble")
-	if not bubble.released.is_connected(_on_bubble_released):
-		bubble.released.connect(_on_bubble_released)
-	if not bubble.enemy_hit.is_connected(_on_bubble_enemy_hit):
-		bubble.enemy_hit.connect(_on_bubble_enemy_hit)
-	if not bubble.launch(peer_id, origin, direction, _bubble_sequence):
-		_bubble_pool.release(bubble)
+	for index in acquired.size():
+		var bubble = acquired[index]
+		$Bubbles.add_child(bubble)
+		bubble.add_to_group("active_bubble")
+		if not bubble.released.is_connected(_on_bubble_released):
+			bubble.released.connect(_on_bubble_released)
+		if not bubble.enemy_hit.is_connected(_on_bubble_enemy_hit):
+			bubble.enemy_hit.connect(_on_bubble_enemy_hit)
+		var fan_index: int = index - 1 if kind == BubbleInventoryScript.SPREAD else 0
+		var velocity := Vector2(signf(direction) * BASIC_SHOT_VELOCITY, fan_velocities[index])
+		if not bubble.launch(peer_id, origin, velocity, _bubble_sequence, kind, fan_index):
+			for member in acquired:
+				member.remove_from_group("active_bubble")
+				_bubble_pool.release(member)
+			return false
+	if kind == BubbleInventoryScript.SPREAD and not bubble_ammo.consume_spread(peer_id):
+		for member in acquired:
+			member.remove_from_group("active_bubble")
+			_bubble_pool.release(member)
 		return false
-	bubble_ammo.consume(peer_id)
 	AudioDirector.play_gameplay_cue("bubble", peer_id)
 	_render_gameplay_hud()
 	return true
@@ -151,20 +180,14 @@ func leave_finish(peer_id: int) -> void:
 
 
 ## Host-owned authoritative snapshot of every shared mutable world object, used
-## to reconstruct level state after a reconnect. Contains score, collected ids,
-## the active checkpoint, both hero positions, enemy motion, gate state, bubble
-## ammo, in-flight projectiles, and the last applied world-event sequence.
+## to reconstruct level state after a reconnect. Contains score and combo,
+## collected ids, the active checkpoint, both hero positions, enemy motion,
+## gate state, bubble ammo, in-flight projectiles, and event sequencing.
 func world_state_snapshot() -> Dictionary:
 	var enemies: Array[Dictionary] = []
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy is EnemyActor:
-			enemies.append({
-				"enemy_id": String(enemy.enemy_id),
-				"enemy_kind": String(enemy.enemy_kind),
-				"motion_state": String(enemy.motion_state),
-				"position": enemy.position,
-				"velocity": enemy.velocity,
-			})
+			enemies.append(enemy.snapshot_state())
 	var gates: Dictionary = {}
 	for gate_id in _gates:
 		gates[gate_id] = _gates[gate_id].snapshot()
@@ -176,11 +199,14 @@ func world_state_snapshot() -> Dictionary:
 				"owner_peer_id": int(bubble.owner_peer_id),
 				"position": bubble.position,
 				"velocity": bubble.velocity,
+				"projectile_kind": String(bubble.projectile_kind),
+				"fan_index": int(bubble.fan_index),
 				"remaining": bubble.lifetime_remaining(),
 			})
 	return {
 		"score": team_score.total,
 		"collected_ids": team_score.snapshot()["awarded_ids"],
+		"combo": team_combo.snapshot(),
 		"checkpoint_id": coop_mode.current_checkpoint_id,
 		"heroes": {1: rabbit.global_position, 2: fox.global_position},
 		"enemies": enemies,
@@ -200,6 +226,8 @@ func restore_world_state(snapshot: Dictionary) -> bool:
 		return false
 	var score_data := {"total": int(snapshot.get("score", -1)), "awarded_ids": snapshot.get("collected_ids", [])}
 	if not team_score.restore(score_data):
+		return false
+	if not team_combo.restore(snapshot.get("combo", {})):
 		return false
 	if not bubble_ammo.restore(snapshot.get("ammo", {})):
 		return false
@@ -221,6 +249,7 @@ func restore_world_state(snapshot: Dictionary) -> bool:
 	_last_applied_world_event_sequence = int(snapshot.get("event_sequence", _last_applied_world_event_sequence))
 	if not _restore_projectiles(snapshot.get("projectiles", [])):
 		return false
+	_reset_all_action_authority()
 	_render_gameplay_hud()
 	return true
 
@@ -234,7 +263,8 @@ func _restore_enemy_state(enemies_data: Variant) -> bool:
 			by_id[String(entry.get("enemy_id", ""))] = entry
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy is EnemyActor and by_id.has(String(enemy.enemy_id)):
-			enemy.restore_state(by_id[String(enemy.enemy_id)])
+			if not enemy.restore_state(by_id[String(enemy.enemy_id)]):
+				return false
 	return true
 
 
@@ -269,7 +299,7 @@ func _validate_world_action(peer_id: int, action_id: String, target_id: String, 
 	var hero = rabbit if peer_id == 1 else fox if peer_id == 2 else null
 	if hero == null or hero.global_position.distance_to(hero_position) > 24.0:
 		return {}
-	if action_id == "fire" and target_id == "bubble-shot" and bubble_ammo.remaining(peer_id) > 0:
+	if action_id == "fire" and target_id == "bubble-shot":
 		return {"kind": "bubble_fire", "payload": {
 			"peer_id": peer_id,
 			"origin": hero.global_position + Vector2(hero.facing_direction * 42.0, -10.0),
@@ -299,19 +329,39 @@ func _validate_world_action(peer_id: int, action_id: String, target_id: String, 
 	return {}
 
 
-func _apply_world_event(_sequence: int, kind: String, payload: Dictionary) -> void:
+func _prepare_world_event(kind: String, payload: Dictionary) -> Dictionary:
+	match kind:
+		"collect", "enemy_defeat":
+			return _with_authoritative_combo_score(payload)
+		"gate_part":
+			return _with_authoritative_combo_score(payload, true)
+	return payload.duplicate(true)
+
+
+func _apply_world_event_accepted(_sequence: int, kind: String, payload: Dictionary) -> bool:
 	match kind:
 		"collect":
 			var target_id := String(payload.get("target_id", ""))
-			collect_star(target_id, _star_node(target_id))
+			return collect_star(target_id, _star_node(target_id), payload)
 		"gate_part":
-			activate_teamwork_part(String(payload.get("gate_id", "")), String(payload.get("part_id", "")), int(payload.get("peer_id", 0)))
+			var gate_id := String(payload.get("gate_id", ""))
+			if not _gates.has(gate_id):
+				return false
+			var before: Dictionary = _gates[gate_id].snapshot()
+			activate_teamwork_part(gate_id, String(payload.get("part_id", "")), int(payload.get("peer_id", 0)), payload)
+			return _gates[gate_id].snapshot() != before
 		"bubble_grant":
-			grant_bubbles(int(payload.get("peer_id", 0)))
+			return grant_bubbles(int(payload.get("peer_id", 0))) > 0
 		"bubble_fire":
-			fire_bubble(int(payload.get("peer_id", 0)), Vector2(payload.get("origin", Vector2.ZERO)), float(payload.get("direction", 0.0)))
+			return fire_bubble(int(payload.get("peer_id", 0)), Vector2(payload.get("origin", Vector2.ZERO)), float(payload.get("direction", 0.0)))
+		"enemy_defeat":
+			return register_enemy_defeat(String(payload.get("enemy_id", "")), int(payload.get("peer_id", 0)), payload)
 		"finish":
+			var before_count := _finish_peers.size()
+			var was_finished := is_finished()
 			enter_finish(int(payload.get("peer_id", 0)))
+			return _finish_peers.size() != before_count or is_finished() != was_finished
+	return false
 
 
 func _on_collectible_entered(body: Node2D, collectible: Area2D) -> void:
@@ -355,7 +405,8 @@ func _open_gate_barrier(gate_id: String) -> void:
 
 
 func _on_enemy_defeated(enemy_id: String, peer_id: int) -> void:
-	register_enemy_defeat(enemy_id, peer_id)
+	if _is_world_authority():
+		publish_world_event("enemy_defeat", {"enemy_id": enemy_id, "peer_id": peer_id})
 
 
 func _on_enemy_player_hit(_enemy_id: String, peer_id: int) -> void:
@@ -364,7 +415,7 @@ func _on_enemy_player_hit(_enemy_id: String, peer_id: int) -> void:
 
 
 func _on_bubble_enemy_hit(enemy_id: String, peer_id: int, _projectile_id: String) -> void:
-	register_enemy_defeat(enemy_id, peer_id)
+	AudioDirector.play_gameplay_cue("enemy_hit", peer_id)
 
 
 func _on_bubble_released(bubble: Node) -> void:
@@ -372,14 +423,70 @@ func _on_bubble_released(bubble: Node) -> void:
 	_bubble_pool.release(bubble)
 
 
-func _perform_context_action(hero: Node2D) -> void:
-	var candidates: Array = get_tree().get_nodes_in_group("sunny_interactable")
-	var target = _action_resolver.select(hero, candidates, INTERACTION_DISTANCE)
-	if target == null:
-		if bubble_ammo.remaining(int(hero.get("peer_id"))) > 0:
-			_submit_action(hero, "fire", "bubble-shot")
+func _step_authoritative_actions(delta: float) -> void:
+	for hero in [rabbit, fox]:
+		_step_hero_action(hero, delta)
+
+
+func _step_hero_action(hero: Node2D, delta: float) -> void:
+	var peer_id := int(hero.get("peer_id"))
+	var held: bool = not hero.controls_locked() and bool(hero.snapshot().action_pressed)
+	var was_held := bool(_previous_action_held.get(peer_id, false))
+	if not held:
+		_reset_action_authority(peer_id)
 		return
-	_submit_action(hero, String(target.interaction_kind), String(target.interactable_id))
+	if not was_held:
+		_previous_action_held[peer_id] = true
+		_fire_remaining[peer_id] = FIRE_INTERVAL
+		var target = _action_resolver.select(hero, get_tree().get_nodes_in_group("sunny_interactable"), INTERACTION_DISTANCE)
+		if target != null:
+			_interaction_claims[peer_id] = true
+			_publish_hero_action(hero, String(target.interaction_kind), String(target.interactable_id))
+			return
+		_publish_hero_action(hero, "fire", "bubble-shot")
+		return
+	if _interaction_claims.has(peer_id):
+		return
+	var next_remaining := float(_fire_remaining.get(peer_id, FIRE_INTERVAL)) - maxf(delta, 0.0)
+	while next_remaining <= 0.0:
+		_publish_hero_action(hero, "fire", "bubble-shot")
+		next_remaining += FIRE_INTERVAL
+	_fire_remaining[peer_id] = next_remaining
+
+
+func _publish_hero_action(hero: Node2D, action_id: String, target_id: String) -> bool:
+	var peer_id := int(hero.get("peer_id"))
+	var event: Dictionary = _validate_world_action(peer_id, action_id, target_id, hero.global_position)
+	var kind := String(event.get("kind", ""))
+	var payload: Variant = event.get("payload", null)
+	if kind.is_empty() or not payload is Dictionary:
+		return false
+	return publish_world_event(kind, payload)
+
+
+func _reset_world_input_state(peer_id: int) -> void:
+	if peer_id <= 0:
+		_reset_all_action_authority()
+	else:
+		_reset_action_authority(peer_id)
+
+
+func _reset_action_authority(peer_id: int) -> void:
+	_previous_action_held[peer_id] = false
+	_fire_remaining[peer_id] = 0.0
+	_interaction_claims.erase(peer_id)
+
+
+func _reset_all_action_authority() -> void:
+	_reset_action_authority(1)
+	_reset_action_authority(2)
+
+
+func _report_pool_exhaustion_once() -> void:
+	if _pool_exhaustion_reported:
+		return
+	_pool_exhaustion_reported = true
+	print_debug("Sunny Forest bubble pool exhausted; shot sequence rejected")
 
 
 func _submit_action(hero: Node2D, action_id: String, target_id: String) -> void:

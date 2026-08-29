@@ -20,13 +20,15 @@ func _init() -> void:
 	_test_invalid_remote_activation_rejected()
 	_test_team_score_rejects_duplicate_events()
 	_test_team_score_snapshot_round_trip()
-	_test_bubble_inventory_is_bounded_and_consumable()
+	_test_bubble_inventory_tracks_powered_spread_shots()
 	_test_action_resolver_prefers_high_priority_target()
 	_test_action_resolver_rejects_ineligible_and_distant_targets()
 	_test_action_resolver_uses_stable_tie_break()
 	_test_interactable_character_eligibility()
 	_test_beetle_actor_patrol_contact_and_stomp()
 	_test_seed_actor_telegraphs_hops_and_accepts_bubble()
+	_test_enemy_durability_recoil_and_snapshot()
+	_test_enemy_defeat_snapshot_invariants()
 	_test_bubble_projectile_launch_move_hit_and_expire()
 	_test_bubble_projectile_pool_is_bounded_and_resets()
 	_test_teamwork_gate_requires_unique_known_parts()
@@ -249,34 +251,57 @@ func _test_team_score_snapshot_round_trip() -> void:
 
 
 ## Catches a bubble flower granting unbounded shots or empty ammo still firing.
-func _test_bubble_inventory_is_bounded_and_consumable() -> void:
+func _test_bubble_inventory_tracks_powered_spread_shots() -> void:
 	var inventory_script = load("res://player/bubble_inventory.gd")
 	if inventory_script == null:
 		_fail("bubble inventory rules must exist")
 		return
 	var inventory = inventory_script.new()
-	if inventory.grant(1) != 5 or inventory.remaining(1) != 5:
-		_fail("default bubble flower must grant five shots")
+	if inventory.kind(1) != "basic" or inventory.remaining(1) != 0:
+		_fail("heroes must start with unlimited basic fire")
 		return
-	if inventory.grant(1, 50) != 5:
-		_fail("bubble inventory must clamp to five shots")
+	if inventory.grant_spread(1) != 10 or inventory.kind(1) != "spread":
+		_fail("bubble flower must grant ten spread shots")
 		return
-	for index in 5:
-		if not inventory.consume(1):
-			_fail("granted bubble shot %d must be consumable" % index)
+	if inventory.grant_spread(1, 50) != 10:
+		_fail("spread charges must clamp at ten")
+		return
+	for index in 10:
+		if not inventory.consume_spread(1):
+			_fail("spread shot %d must be consumable" % index)
 			return
-	if inventory.consume(1) or inventory.remaining(1) != 0:
-		_fail("empty bubble inventory must reject consumption")
+	if inventory.consume_spread(1) or inventory.kind(1) != "basic" or inventory.remaining(1) != 0:
+		_fail("exhausted spread charges must return to unlimited basic fire")
 		return
-	if inventory.grant(0) != 0 or inventory.remaining(0) != 0:
-		_fail("invalid peer ids must not receive bubble ammunition")
+	if inventory.grant(1) != 10 or inventory.consume(1) == false or inventory.remaining(1) != 9:
+		_fail("legacy grant and consume wrappers must follow the ten-charge spread contract")
 		return
 	var restored = inventory_script.new()
-	if not restored.restore({1: 4, 2: 2}):
+	if not restored.restore({1: {"kind": "spread", "remaining": 4}, 2: {"kind": "basic", "remaining": 0}}):
 		_fail("valid bubble inventory snapshot must restore")
 		return
-	if restored.remaining(1) != 4 or restored.remaining(2) != 2:
-		_fail("bubble inventory snapshot must preserve each peer count")
+	if restored.kind(1) != "spread" or restored.remaining(1) != 4 or restored.kind(2) != "basic":
+		_fail("bubble inventory snapshot must preserve powered kind and count")
+		return
+	var json_restored = inventory_script.new()
+	if not json_restored.restore({"1": {"kind": "spread", "remaining": 2}}) or json_restored.kind(1) != "spread" or json_restored.remaining(1) != 2:
+		_fail("inventory restore must accept numeric peer keys after JSON round-trip")
+		return
+	var before: Dictionary = restored.snapshot()
+	if restored.restore({1: {"kind": "laser", "remaining": 1}}):
+		_fail("unknown powered inventory kinds must be rejected")
+		return
+	if restored.restore({3: {"kind": "spread", "remaining": 1}}):
+		_fail("inventory restore must reject peers outside the two heroes")
+		return
+	if restored.restore({1: {"kind": "spread", "remaining": 11}}):
+		_fail("inventory restore must reject counts above ten")
+		return
+	if restored.restore({1: {"kind": "spread", "remaining": 1}, "1": {"kind": "spread", "remaining": 2}}):
+		_fail("inventory restore must reject duplicate normalized peer entries")
+		return
+	if restored.snapshot() != before:
+		_fail("failed inventory restore must leave existing charges unchanged")
 
 
 ## Catches bubble firing while a nearby teamwork object should own the action.
@@ -397,7 +422,7 @@ func _test_beetle_actor_patrol_contact_and_stomp() -> void:
 		_fail("enemy body overlap must route a descending hero to stomp logic")
 
 
-## Catches the seed jumping without warning or bubbles failing to defeat it.
+## Catches the seed jumping without warning or a one-hit seed surviving a bubble.
 func _test_seed_actor_telegraphs_hops_and_accepts_bubble() -> void:
 	var scene: PackedScene = load("res://world/seed_enemy.tscn")
 	if scene == null:
@@ -420,11 +445,114 @@ func _test_seed_actor_telegraphs_hops_and_accepts_bubble() -> void:
 	if seed.motion_state != seed.HOP or seed.velocity.y >= 0.0:
 		_fail("seed hop must begin with upward velocity after telegraph")
 		return
-	if not seed.try_bubble(2) or seed.motion_state != seed.DEFEATED:
+	if not seed.try_bubble(2, Vector2(120.0, -40.0)) or seed.motion_state != seed.DEFEATED:
 		_fail("one bubble hit must defeat the hopping seed")
 		return
-	if seed.try_bubble(2):
+	if seed.try_bubble(2, Vector2.ZERO):
 		_fail("defeated seed must reject repeated bubble hits")
+
+
+## Catches a beetle being defeated by one hit, accepting fan-member duplicates,
+## unbounded recoil, or reconnect restoration mutating partial enemy state.
+func _test_enemy_durability_recoil_and_snapshot() -> void:
+	var beetle = load("res://world/beetle_enemy.tscn").instantiate()
+	beetle.enemy_id = "durable-beetle"
+	root.add_child(beetle)
+	var defeats: Array[int] = []
+	var hurts: Array[int] = []
+	beetle.defeated.connect(func(_id: String, _peer: int) -> void: defeats.append(1))
+	beetle.hurt.connect(func(_id: String, _peer: int) -> void: hurts.append(1))
+	if not beetle.try_bubble(1, Vector2(1200.0, -400.0)):
+		_fail("first beetle hit must be accepted")
+		return
+	if beetle.health != 1 or beetle.motion_state == beetle.DEFEATED or hurts.size() != 1:
+		_fail("first beetle hit must damage once without defeating")
+		return
+	if beetle.velocity.length() > 180.01:
+		_fail("enemy hit recoil must be clamped to 180 pixels per second")
+		return
+	if beetle.try_bubble(1, Vector2.ZERO):
+		_fail("hurt cooldown must reject simultaneous fan-member hit")
+		return
+	beetle.host_step(beetle.HURT_COOLDOWN + 0.01)
+	if not beetle.try_bubble(1, Vector2.ZERO) or defeats.size() != 1:
+		_fail("second separated beetle hit must defeat once")
+		return
+	var restored = load("res://world/beetle_enemy.tscn").instantiate()
+	restored.enemy_id = "restored-beetle"
+	root.add_child(restored)
+	var restored_hurts: Array[int] = []
+	var restored_defeats: Array[int] = []
+	restored.hurt.connect(func(_id: String, _peer: int) -> void: restored_hurts.append(1))
+	restored.defeated.connect(func(_id: String, _peer: int) -> void: restored_defeats.append(1))
+	var snapshot: Dictionary = beetle.snapshot_state()
+	snapshot["enemy_id"] = "restored-beetle"
+	if not restored.restore_state(snapshot):
+		_fail("complete enemy snapshot must restore")
+		return
+	if restored.health != 0 or restored.motion_state != restored.DEFEATED or not restored_hurts.is_empty() or not restored_defeats.is_empty():
+		_fail("enemy restore must apply defeat state without gameplay signals")
+		return
+	var before: Dictionary = restored.snapshot_state()
+	if restored.restore_state({"enemy_id": "restored-beetle", "motion_state": "patrol"}):
+		_fail("partial enemy snapshots must be rejected")
+		return
+	if restored.snapshot_state() != before:
+		_fail("failed enemy restore must not mutate the current state")
+
+
+## Catches defeated snapshots retaining health/cooldown state or accepting
+## oversized restored recoil.
+func _test_enemy_defeat_snapshot_invariants() -> void:
+	var scene: PackedScene = load("res://world/beetle_enemy.tscn")
+	var stomped = scene.instantiate()
+	stomped.enemy_id = "stomped-beetle"
+	root.add_child(stomped)
+	if not stomped.try_stomp(stomped.global_position + Vector2(0.0, -24.0), Vector2(0.0, 140.0), 1):
+		_fail("stomped beetle must enter defeated state")
+		return
+	if stomped.health != 0 or not is_zero_approx(stomped.hurt_remaining):
+		_fail("stomp defeat must clear health and hurt cooldown")
+		return
+	var restored_stomp = scene.instantiate()
+	restored_stomp.enemy_id = "restored-stomped-beetle"
+	root.add_child(restored_stomp)
+	var stomp_snapshot: Dictionary = stomped.snapshot_state()
+	stomp_snapshot["enemy_id"] = "restored-stomped-beetle"
+	if not restored_stomp.restore_state(stomp_snapshot):
+		_fail("stomped defeated snapshot must restore")
+		return
+	var hurt_then_stomp = scene.instantiate()
+	hurt_then_stomp.enemy_id = "hurt-stomped-beetle"
+	root.add_child(hurt_then_stomp)
+	if not hurt_then_stomp.try_bubble(1, Vector2(120.0, -40.0)):
+		_fail("beetle must accept the setup hurt hit")
+		return
+	if not hurt_then_stomp.try_stomp(hurt_then_stomp.global_position + Vector2(0.0, -24.0), Vector2(0.0, 140.0), 1):
+		_fail("stomp must still defeat a hurt beetle")
+		return
+	var restored_hurt_stomp = scene.instantiate()
+	restored_hurt_stomp.enemy_id = "restored-hurt-stomped-beetle"
+	root.add_child(restored_hurt_stomp)
+	var hurt_stomp_snapshot: Dictionary = hurt_then_stomp.snapshot_state()
+	hurt_stomp_snapshot["enemy_id"] = "restored-hurt-stomped-beetle"
+	if not restored_hurt_stomp.restore_state(hurt_stomp_snapshot):
+		_fail("hurt-then-stomp defeated snapshot must restore")
+		return
+	var hurt_receiver = scene.instantiate()
+	hurt_receiver.enemy_id = "hurt-velocity-beetle"
+	root.add_child(hurt_receiver)
+	if not hurt_receiver.try_bubble(1, Vector2(120.0, -40.0)):
+		_fail("beetle must accept the HURT snapshot setup hit")
+		return
+	var before: Dictionary = hurt_receiver.snapshot_state()
+	var oversized_recoil: Dictionary = before.duplicate(true)
+	oversized_recoil["velocity"] = Vector2(181.0, 0.0)
+	if hurt_receiver.restore_state(oversized_recoil):
+		_fail("HURT snapshots must reject recoil over 180 pixels per second")
+		return
+	if hurt_receiver.snapshot_state() != before:
+		_fail("rejected HURT recoil must not partially mutate enemy state")
 
 
 ## Catches invalid shots becoming active, projectile motion drifting from the
@@ -436,18 +564,28 @@ func _test_bubble_projectile_launch_move_hit_and_expire() -> void:
 		return
 	var bubble = scene.instantiate()
 	root.add_child(bubble)
-	if bubble.launch(0, Vector2.ZERO, 1.0, 1):
+	if bubble.launch(0, Vector2.ZERO, Vector2(360.0, 0.0), 1):
 		_fail("bubble must reject invalid owner peer id")
 		return
-	if bubble.launch(1, Vector2.ZERO, 0.0, 1):
-		_fail("bubble must reject zero direction")
+	if bubble.launch(1, Vector2.ZERO, Vector2.ZERO, 1):
+		_fail("bubble must reject zero velocity")
 		return
-	if not bubble.launch(1, Vector2(10, 20), 1.0, 7):
+	if bubble.launch(1, Vector2.ZERO, 0.0001, 1):
+		_fail("legacy scalar launch must reject a near-zero direction")
+		return
+	if not bubble.launch(1, Vector2(10, 20), Vector2(360.0, -40.0), 7, "spread", -1):
 		_fail("valid bubble launch must become active")
 		return
+	if bubble.projectile_kind != "spread" or bubble.fan_index != -1 or bubble.projectile_id != "bubble-7--1":
+		_fail("spread member must preserve its distinct kind and fan identity")
+		return
+	var spread_visual := bubble.get_node("Visual") as Sprite2D
+	if spread_visual.scale != Vector2(0.52, 0.52) or spread_visual.modulate != Color("9ce7ff"):
+		_fail("spread members must have a distinct tint and scale")
+		return
 	bubble.host_step(0.5)
-	if bubble.position != Vector2(190, 20):
-		_fail("bubble must move 180 pixels in half a second at fixed speed")
+	if bubble.position != Vector2(190, 0):
+		_fail("bubble must move from its supplied velocity")
 		return
 	var player = _make_player_body(2)
 	if bubble.try_enemy_hit(player):
@@ -462,13 +600,16 @@ func _test_bubble_projectile_launch_move_hit_and_expire() -> void:
 	if not bubble.try_enemy_hit(seed):
 		_fail("active bubble must defeat an enemy that accepts bubble hits")
 		return
-	if bubble.try_enemy_hit(seed) or hits != ["seed-hit:1:bubble-7"]:
+	if bubble.try_enemy_hit(seed) or hits != ["seed-hit:1:bubble-7--1"]:
 		_fail("bubble must emit one enemy hit and then become inactive")
 		return
 	bubble.reset_for_pool()
+	if bubble.projectile_kind != "basic" or bubble.fan_index != 0 or spread_visual.scale != Vector2(0.42, 0.42) or spread_visual.modulate != Color.WHITE:
+		_fail("pool reset must restore the basic bubble identity and appearance")
+		return
 	var releases: Array[int] = []
 	bubble.released.connect(func(_node: Node) -> void: releases.append(1))
-	bubble.launch(1, Vector2.ZERO, -1.0, 8)
+	bubble.launch(1, Vector2.ZERO, Vector2(-360.0, 0.0), 8)
 	bubble.host_step(2.499)
 	if not bubble.active or not releases.is_empty():
 		_fail("bubble must remain active just inside its 2.5 second lifetime")
@@ -476,6 +617,22 @@ func _test_bubble_projectile_launch_move_hit_and_expire() -> void:
 	bubble.host_step(0.001)
 	if bubble.active or releases.size() != 1:
 		_fail("bubble must release exactly at its lifetime boundary")
+		return
+	var restored_bubble = scene.instantiate()
+	root.add_child(restored_bubble)
+	if not restored_bubble.restore_state({
+		"owner_peer_id": 2,
+		"projectile_id": "bubble-9-1",
+		"position": Vector2(40.0, 20.0),
+		"velocity": Vector2(-360.0, 0.0),
+		"remaining": 1.0,
+		"projectile_kind": "spread",
+		"fan_index": 1,
+	}):
+		_fail("projectile restore must accept a valid powered spread member")
+		return
+	if restored_bubble.projectile_kind != "spread" or restored_bubble.fan_index != 1:
+		_fail("projectile restore must preserve powered kind and fan identity")
 
 
 ## Catches the level exceeding six simultaneous bubbles or a pooled projectile
@@ -489,15 +646,15 @@ func _test_bubble_projectile_pool_is_bounded_and_resets() -> void:
 		if bubble == null:
 			_fail("pool must provide each of its six bubble slots")
 			return
-		bubble.launch(1, Vector2.ZERO, 1.0, index + 1)
+		bubble.launch(1, Vector2.ZERO, Vector2(360.0, 0.0), index + 1)
 		acquired.append(bubble)
 	if pool.acquire() != null:
 		_fail("bubble pool must reject a seventh simultaneous projectile")
 		return
 	var first: Node = acquired[0]
 	pool.release(first)
-	if first.active or first.visible:
-		_fail("released bubble must reset active and visible state")
+	if first.active or first.visible or first.projectile_kind != "basic" or first.fan_index != 0:
+		_fail("released bubble must clear active state and powered identity")
 		return
 	if pool.acquire() != first:
 		_fail("bubble pool must reuse the released projectile")

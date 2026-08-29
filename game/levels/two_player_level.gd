@@ -29,6 +29,7 @@ const REMOTE_KEY_ACTIONS := {
 
 const NET_SYNC_HZ: float = 20.0
 const _NET_SYNC_INTERVAL: float = 1.0 / NET_SYNC_HZ
+const SPRING_CAMERA_IMPULSE: float = 5.0
 
 @onready var rabbit = $Rabbit
 @onready var fox = $Fox
@@ -45,6 +46,7 @@ var _finished: bool = false
 var _net_sync_accumulator: float = 0.0
 var _remote_input_frame = null
 var _has_remote_input: bool = false
+var _had_live_world_peer: bool = false
 var _last_world_request_by_peer: Dictionary = {}
 var _next_local_world_request_sequence: int = 0
 var _next_world_event_sequence: int = 0
@@ -54,6 +56,7 @@ var _last_applied_world_event_sequence: int = 0
 func _ready() -> void:
 	_background = _find_background()
 	configure_local_role(local_role)
+	_connect_spring_feedback()
 	var fall_zone := get_node_or_null("FallRespawn")
 	if fall_zone != null:
 		fall_zone.body_entered.connect(_respawn_fallen_hero)
@@ -63,6 +66,11 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_clear_disconnected_remote_input()
+	for spring in get_tree().get_nodes_in_group("spring_pad"):
+		if spring.has_method("host_step"):
+			spring.host_step(delta)
+	_step_shared_level_rules(delta)
 	_step_level(delta)
 	route_control_frames()
 	apply_remote_desktop_frame(_desktop_remote_frame())
@@ -93,6 +101,7 @@ func configure_local_role(role: String) -> void:
 		rabbit_camera.make_current()
 	else:
 		fox_camera.make_current()
+	_configure_local_camera_feedback()
 	# The local hero always simulates. The partner keeps simulating too until
 	# network state actually arrives, so offline play, the local arena, and the
 	# desktop keyboard second player all still move under their own physics.
@@ -179,19 +188,33 @@ func process_world_action(peer_id: int, request_sequence: int, action_id: String
 	var payload: Variant = event.get("payload", null)
 	if kind.is_empty() or not payload is Dictionary:
 		return false
-	_next_world_event_sequence += 1
-	if not apply_world_event(_next_world_event_sequence, kind, payload):
+	return publish_world_event(kind, payload)
+
+
+## Applies and replicates one authority-approved mutation while keeping request
+## replay validation in process_world_action(). Host-owned held input uses this
+## same publication boundary rather than creating a parallel event path.
+func publish_world_event(kind: String, payload: Dictionary) -> bool:
+	if not _is_world_authority() or kind.is_empty():
 		return false
-	if _has_live_world_peer() and _is_world_authority():
-		_receive_world_event.rpc(_next_world_event_sequence, kind, payload)
+	var prepared_payload: Variant = _prepare_world_event(kind, payload)
+	if not prepared_payload is Dictionary:
+		return false
+	var event_sequence := _next_world_event_sequence + 1
+	if not apply_world_event(event_sequence, kind, prepared_payload):
+		return false
+	_next_world_event_sequence = event_sequence
+	if _has_live_world_peer():
+		_receive_world_event.rpc(event_sequence, kind, prepared_payload)
 	return true
 
 
 func apply_world_event(event_sequence: int, kind: String, payload: Dictionary) -> bool:
 	if event_sequence <= _last_applied_world_event_sequence or kind.is_empty():
 		return false
+	if not _apply_world_event_accepted(event_sequence, kind, payload):
+		return false
 	_last_applied_world_event_sequence = event_sequence
-	_apply_world_event(event_sequence, kind, payload)
 	return true
 
 
@@ -213,7 +236,7 @@ func _receive_world_event(event_sequence: int, kind: String, payload: Dictionary
 
 func _is_world_authority() -> bool:
 	var session = get_node_or_null("/root/Session")
-	return session == null or session.state != Session.PLAYING or session.is_host()
+	return session == null or session.state == Session.IDLE or (session.state == Session.PLAYING and session.is_host())
 
 
 func _has_live_world_peer() -> bool:
@@ -231,12 +254,28 @@ func _step_level(_delta: float) -> void:
 	pass
 
 
+func _step_shared_level_rules(_delta: float) -> void:
+	pass
+
+
 func _present_level(_delta: float) -> void:
 	pass
 
 
 func _validate_world_action(_peer_id: int, _action_id: String, _target_id: String, _hero_position: Vector2) -> Dictionary:
 	return {}
+
+
+func _prepare_world_event(_kind: String, payload: Dictionary) -> Dictionary:
+	return payload.duplicate(true)
+
+
+## Acceptance adapter for existing concrete levels. Levels with rejectable
+## mutations override this and return the real result; legacy void hooks keep
+## their prior accepted-event behavior.
+func _apply_world_event_accepted(sequence: int, kind: String, payload: Dictionary) -> bool:
+	_apply_world_event(sequence, kind, payload)
+	return true
 
 
 func _apply_world_event(_sequence: int, _kind: String, _payload: Dictionary) -> void:
@@ -268,9 +307,54 @@ func _remote_hero():
 	return fox if local_role == RABBIT_ROLE else rabbit
 
 
+func _local_camera() -> Camera2D:
+	return rabbit_camera if local_role == RABBIT_ROLE else fox_camera
+
+
+func _configure_local_camera_feedback() -> void:
+	var camera := _local_camera()
+	if camera.enabled and camera.has_method("set_follow_hero"):
+		camera.call("set_follow_hero", _local_hero())
+
+
+func _connect_spring_feedback() -> void:
+	for spring in get_tree().get_nodes_in_group("spring_pad"):
+		if spring.has_signal("launched") and not spring.is_connected("launched", _on_spring_launched):
+			spring.connect("launched", _on_spring_launched)
+
+
+func _on_spring_launched(peer_id: int) -> void:
+	if peer_id != int(_local_hero().get("peer_id")):
+		return
+	var camera := _local_camera()
+	if camera.enabled and camera.has_method("add_impulse"):
+		camera.call("add_impulse", SPRING_CAMERA_IMPULSE)
+
+
 func _respawn_fallen_hero(body: Node2D) -> void:
 	if body.has_method("respawn"):
 		body.respawn(body.checkpoint_position)
+		_reset_world_input_state(int(body.get("peer_id")))
+
+
+func _clear_disconnected_remote_input() -> void:
+	if _has_live_world_peer():
+		_had_live_world_peer = true
+		return
+	if not _had_live_world_peer:
+		return
+	if _has_remote_input:
+		var remote = _remote_hero()
+		if remote.has_method("apply_network_state"):
+			remote.apply_network_state(remote.global_position, Vector2.ZERO, 0.0, false, false)
+		remote.is_network_remote = false
+		_has_remote_input = false
+	_had_live_world_peer = false
+	_reset_world_input_state(0)
+
+
+func _reset_world_input_state(_peer_id: int) -> void:
+	pass
 
 
 ## The level's parallax backdrop, whatever world it belongs to.

@@ -56,7 +56,13 @@ func _run() -> void:
 		return
 	if not _test_platforms_are_reachable(level):
 		return
+	if not _test_projectile_hit_does_not_score_until_defeat(level):
+		return
 	if not _test_authoritative_star_and_enemy_score(level):
+		return
+	if not await _test_score_event_uses_host_combo_outcome():
+		return
+	if not await _test_first_teamwork_part_uses_host_combo_outcome():
 		return
 	if not _test_role_gated_fallen_log(level):
 		return
@@ -108,8 +114,97 @@ func _test_authoritative_star_and_enemy_score(level: Node) -> bool:
 	if not level.register_enemy_defeat("beetle-meadow-1", 1):
 		_fail("first enemy defeat must be recorded")
 		return false
-	if level.register_enemy_defeat("beetle-meadow-1", 2) or level.team_score.total != 35:
+	if level.register_enemy_defeat("beetle-meadow-1", 2) or level.team_score.total != 60:
 		_fail("duplicate enemy defeat must not score twice")
+		return false
+	if level.team_combo.multiplier != 2:
+		_fail("only the nonduplicate star and enemy scores must advance the combo")
+		return false
+	return true
+
+
+## Catches a receiver previewing its own jittered combo timer instead of using
+## the authoritative multiplier and resulting combo state carried by the event.
+func _test_score_event_uses_host_combo_outcome() -> bool:
+	var scene = load("res://levels/sunny_forest.tscn")
+	var host = scene.instantiate()
+	var receiver = scene.instantiate()
+	root.add_child(host)
+	root.add_child(receiver)
+	await process_frame
+	host.process_mode = Node.PROCESS_MODE_DISABLED
+	receiver.process_mode = Node.PROCESS_MODE_DISABLED
+	var payload: Dictionary = host._prepare_world_event("collect", {"target_id": "star-2"})
+	if payload.get("score_multiplier", 0) != 1 or payload.get("combo_state", {}) != {"multiplier": 1, "remaining": 2.5}:
+		_fail("host must carry its authoritative multiplier and resulting combo state")
+		return false
+	# Deliberately diverge receive-time state to the maximum active chain. The
+	# identical host event must still award 10 and restore the host's 1x outcome.
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	if not host.apply_world_event(1, "collect", payload) or not receiver.apply_world_event(1, "collect", payload):
+		_fail("the same authoritative score event must apply on host and receiver")
+		return false
+	if host.team_score.total != 10 or receiver.team_score.total != 10:
+		_fail("host and receiver must award the carried 1x score regardless of local timer")
+		return false
+	if host.team_combo.snapshot() != payload["combo_state"] or receiver.team_combo.snapshot() != payload["combo_state"]:
+		_fail("host and receiver must apply the carried resulting combo state exactly")
+		return false
+	host.queue_free()
+	receiver.queue_free()
+	return true
+
+
+## Catches the first accepted gate mutation scoring/refreshing without carrying
+## the host's combo result, leaving a jittered receiver permanently divergent.
+func _test_first_teamwork_part_uses_host_combo_outcome() -> bool:
+	var scene = load("res://levels/sunny_forest.tscn")
+	var host = scene.instantiate()
+	var receiver = scene.instantiate()
+	root.add_child(host)
+	root.add_child(receiver)
+	await process_frame
+	host.process_mode = Node.PROCESS_MODE_DISABLED
+	receiver.process_mode = Node.PROCESS_MODE_DISABLED
+	host.team_combo.commit_scored_event()
+	host.team_combo.commit_scored_event()
+	host.team_combo.step(1.0)
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.step(2.4)
+	var payload: Dictionary = host._prepare_world_event("gate_part", {
+		"gate_id": "fallen-log",
+		"part_id": "log",
+		"peer_id": 2,
+	})
+	if payload.get("score_multiplier", 0) != 1 or payload.get("combo_state", {}) != {"multiplier": 2, "remaining": 2.5}:
+		_fail("first accepted gate part must carry the host teamwork combo outcome")
+		return false
+	if not host.apply_world_event(1, "gate_part", payload) or not receiver.apply_world_event(1, "gate_part", payload):
+		_fail("first valid gate part must be accepted on host and receiver")
+		return false
+	if host.team_score.total != 100 or receiver.team_score.total != 100:
+		_fail("first accepted gate part must award teamwork exactly once on both peers")
+		return false
+	if host.team_combo.snapshot() != payload["combo_state"] or receiver.team_combo.snapshot() != payload["combo_state"]:
+		_fail("first teamwork score must apply the carried combo refresh exactly")
+		return false
+	host.queue_free()
+	receiver.queue_free()
+	return true
+
+
+## Catches an accepted non-lethal bubble hit being counted as an enemy defeat.
+func _test_projectile_hit_does_not_score_until_defeat(level: Node) -> bool:
+	var before: int = level.team_score.total
+	level._on_bubble_enemy_hit("beetle-meadow-1", 1, "bubble-feedback-test")
+	if level.team_score.total != before:
+		_fail("non-lethal bubble hits must not award enemy defeat points")
 		return false
 	return true
 
@@ -134,17 +229,20 @@ func _test_role_gated_fallen_log(level: Node) -> bool:
 	if not level.process_world_action(1, 4, "switch", "overhead-switch", switch_target.global_position):
 		_fail("Riki must be able to activate the overhead switch")
 		return false
-	if not level.gate_is_open("fallen-log") or level.team_score.total != 135:
+	if not level.gate_is_open("fallen-log") or level.team_score.total != 160:
 		_fail("two role actions must open the log gate and add 100 team points")
+		return false
+	if level.team_combo.multiplier != 2 or not is_equal_approx(level.team_combo.remaining, 2.5):
+		_fail("teamwork must stay at 1x and only refresh the active combo window")
 		return false
 	return true
 
 
-## Catches bubble pickup not granting five, firing not consuming one, or the
-## active projectile budget growing beyond six.
+## Catches bubble pickup not granting ten, spread firing publishing a partial
+## fan, or the active projectile budget growing beyond six.
 func _test_bubble_inventory_and_pool(level: Node) -> bool:
-	if level.grant_bubbles(1) != 5:
-		_fail("bubble flower must grant five shots")
+	if level.grant_bubbles(1) != 10:
+		_fail("bubble flower must grant ten spread shots")
 		return false
 	var rabbit = level.get_node("Rabbit")
 	rabbit.global_position = Vector2(400, 640)
@@ -153,21 +251,20 @@ func _test_bubble_inventory_and_pool(level: Node) -> bool:
 	action_frame.action = true
 	rabbit.apply_input(action_frame)
 	level._step_level(0.0)
-	if level.active_bubble_count() != 1:
-		_fail("context action with no nearby object must fire a bubble")
+	if level.active_bubble_count() != 3:
+		_fail("context action with spread charges must fire a three-member fan")
 		return false
-	if level.bubble_ammo.remaining(1) != 4 or level.active_bubble_count() != 1:
-		_fail("bubble fire must consume one shot and activate one projectile")
+	if level.bubble_ammo.remaining(1) != 9:
+		_fail("one accepted spread sequence must consume exactly one charge")
 		return false
-	for shot in 4:
-		if not level.fire_bubble(1, Vector2(1800, 620), 1.0):
-			_fail("remaining granted bubble shot %d must fire" % shot)
-			return false
+	if not level.fire_bubble(1, Vector2(1800, 620), 1.0):
+		_fail("a second complete spread fan must fit the remaining pool")
+		return false
 	if level.fire_bubble(1, Vector2(1800, 620), 1.0):
-		_fail("empty bubble inventory must reject firing")
+		_fail("spread fire must reject pool exhaustion atomically")
 		return false
-	if level.active_bubble_count() != 5:
-		_fail("five granted shots must produce five active bounded projectiles")
+	if level.bubble_ammo.remaining(1) != 8 or level.active_bubble_count() != 6:
+		_fail("two spread sequences must spend two charges and fill six projectile slots")
 		return false
 	return true
 
@@ -183,23 +280,28 @@ func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
 	if not level.activate_teamwork_part("bubble-grove", "right-flower", 2):
 		_fail("both pressure flowers must open Bubble Grove")
 		return false
-	if not level.gate_is_open("bubble-grove") or level.team_score.total != 235:
+	if not level.gate_is_open("bubble-grove") or level.team_score.total != 260:
 		_fail("pressure gate must award one 100-point teamwork bonus")
 		return false
 	var world_snapshot: Dictionary = level.world_state_snapshot()
-	for required_key in ["score", "collected_ids", "checkpoint_id", "heroes", "enemies", "gates", "ammo", "projectiles", "event_sequence"]:
+	for required_key in ["score", "collected_ids", "combo", "checkpoint_id", "heroes", "enemies", "gates", "ammo", "projectiles", "event_sequence"]:
 		if not world_snapshot.has(required_key):
 			_fail("Sunny Forest reconnect snapshot is missing %s" % required_key)
 			return false
-	if world_snapshot.get("enemies", []).size() < 4 or world_snapshot.get("projectiles", []).size() != 5:
+	if world_snapshot.get("enemies", []).size() < 4 or world_snapshot.get("projectiles", []).size() != 6:
 		_fail("snapshot must include enemy and active bubble world state")
 		return false
+	var enemy_snapshot: Dictionary = world_snapshot.get("enemies", [])[0]
+	for required_enemy_key in ["enemy_id", "enemy_kind", "motion_state", "health", "hurt_remaining", "position", "velocity", "direction"]:
+		if not enemy_snapshot.has(required_enemy_key):
+			_fail("enemy snapshot must include durable state key %s" % required_enemy_key)
+			return false
 	level.register_enemy_defeat("after-snapshot", 1)
 	level.grant_bubbles(1)
 	if not level.restore_world_state(world_snapshot):
 		_fail("valid Sunny Forest world snapshot must restore")
 		return false
-	if level.team_score.total != 235 or level.bubble_ammo.remaining(1) != 0 or level.active_bubble_count() != 5:
+	if level.team_score.total != 260 or level.team_combo.multiplier != 2 or level.bubble_ammo.remaining(1) != 8 or level.active_bubble_count() != 6:
 		_fail("snapshot restore must replace score, ammo, and active projectiles")
 		return false
 	var results: Array[Dictionary] = []
@@ -214,7 +316,7 @@ func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
 	if not level.enter_finish(1) or not level.is_finished():
 		_fail("both heroes at the magical tree must finish the level")
 		return false
-	if results.size() != 1 or int(results[0].get("team_score", -1)) != 235:
+	if results.size() != 1 or int(results[0].get("team_score", -1)) != 260:
 		_fail("finish payload must contain the authoritative team score")
 		return false
 	if String(results[0].get("next_level_id", "")) != "crystal_caves":

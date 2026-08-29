@@ -7,6 +7,7 @@ extends TwoPlayerLevel
 
 const CoopModeScript := preload("res://modes/coop_mode.gd")
 const TeamScoreScript := preload("res://core/team_score.gd")
+const TeamComboScript := preload("res://core/team_combo.gd")
 const BubbleInventoryScript := preload("res://player/bubble_inventory.gd")
 
 ## Campaign identifier for this level; set on the scene root.
@@ -14,6 +15,7 @@ const BubbleInventoryScript := preload("res://player/bubble_inventory.gd")
 
 var coop_mode: RefCounted = null
 var team_score: RefCounted = null
+var team_combo: RefCounted = null
 var bubble_ammo: RefCounted = null
 var _collected_stars: int = 0
 
@@ -23,6 +25,7 @@ func _setup_level() -> void:
 		push_error("cooperative level must declare level_id")
 	coop_mode = CoopModeScript.new()
 	team_score = TeamScoreScript.new()
+	team_combo = TeamComboScript.new()
 	bubble_ammo = BubbleInventoryScript.new()
 	rabbit.peer_id = 1
 	fox.peer_id = 2
@@ -41,6 +44,10 @@ func _setup_level() -> void:
 
 func _setup_coop_level() -> void:
 	pass
+
+
+func _step_shared_level_rules(delta: float) -> void:
+	team_combo.step(delta)
 
 
 ## Campaign levels up to and including `id`, in campaign order.
@@ -76,8 +83,9 @@ func _on_collectible_entered(body: Node2D, collectible: Area2D) -> void:
 	collect_star(_collectible_id(collectible), collectible)
 
 
-func collect_star(star_id: String, collectible: Node = null) -> bool:
-	var points: int = team_score.award("star:%s" % star_id, "star")
+func collect_star(star_id: String, collectible: Node = null, score_payload: Dictionary = {}) -> bool:
+	var event_id := "star:%s" % star_id
+	var points: int = _award_authoritative_score(event_id, "star", score_payload) if not score_payload.is_empty() else _award_combo_score(event_id, "star")
 	if points <= 0:
 		return false
 	_collected_stars += 1
@@ -87,6 +95,59 @@ func collect_star(star_id: String, collectible: Node = null) -> bool:
 	_show_score_gain(points, collectible.global_position if collectible is Node2D else Vector2.ZERO)
 	_render_gameplay_hud()
 	return true
+
+
+func _award_combo_score(event_id: String, category: String) -> int:
+	var multiplier: int = team_combo.preview_multiplier()
+	var points: int = team_score.award(event_id, category, multiplier)
+	if points > 0:
+		team_combo.commit_scored_event()
+	return points
+
+
+## Builds the immutable score outcome a host includes in a world event. The
+## receiver applies these exact values instead of consulting its local timer.
+func _with_authoritative_combo_score(payload: Dictionary, teamwork: bool = false) -> Dictionary:
+	var result := payload.duplicate(true)
+	var score_multiplier: int = 1 if teamwork else team_combo.preview_multiplier()
+	var combo_state: Dictionary = team_combo.snapshot()
+	if teamwork:
+		if float(combo_state.get("remaining", 0.0)) > 0.0:
+			combo_state["remaining"] = TeamComboScript.WINDOW
+	else:
+		combo_state = {
+			"multiplier": score_multiplier,
+			"remaining": TeamComboScript.WINDOW,
+		}
+	result["score_multiplier"] = score_multiplier
+	result["combo_state"] = combo_state
+	return result
+
+
+## Applies a host-carried score and combo result. Validate the compact combo
+## outcome before changing score; full rich restore atomicity remains Task 8.
+func _award_authoritative_score(event_id: String, category: String, payload: Dictionary) -> int:
+	var multiplier_value: Variant = payload.get("score_multiplier", null)
+	var combo_value: Variant = payload.get("combo_state", null)
+	if typeof(multiplier_value) != TYPE_INT or not combo_value is Dictionary:
+		return 0
+	var multiplier := int(multiplier_value)
+	if multiplier < 1 or multiplier > TeamComboScript.MAX_MULTIPLIER:
+		return 0
+	var validated_combo = TeamComboScript.new()
+	if not validated_combo.restore(combo_value):
+		return 0
+	var points: int = team_score.award(event_id, category, multiplier)
+	if points > 0:
+		team_combo.restore(combo_value)
+	return points
+
+
+func _award_teamwork_score(event_id: String) -> int:
+	var points: int = team_score.award(event_id, "teamwork", 1)
+	if points > 0:
+		team_combo.refresh()
+	return points
 
 
 func _render_gameplay_hud() -> void:

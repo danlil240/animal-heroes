@@ -2,6 +2,7 @@ class_name HeroVisual
 extends Node2D
 
 @export_enum("rabbit", "fox") var kind: String = "rabbit"
+@export var speed_presentation_enabled: bool = false
 
 var _body: CharacterBody2D
 var _elapsed: float = 0.0
@@ -10,6 +11,8 @@ var _last_hearts: int = -1
 var _last_body_position: Vector2
 var _effect_tween: Tween
 var _celebration_remaining: float = 0.0
+var _last_just_landed: bool = false
+var _landing_squash_remaining: float = 0.0
 
 
 func _ready() -> void:
@@ -22,6 +25,9 @@ func configure(hero_kind: String, body: CharacterBody2D) -> void:
 	$Pose/RabbitArt.visible = kind == "rabbit"
 	$Pose/FoxArt.visible = kind == "fox"
 	$Pose/ActionBubble.visible = false
+	$Pose/SpeedStreak.visible = false
+	_last_just_landed = false
+	_landing_squash_remaining = 0.0
 	if _body != null:
 		_last_body_position = _body.global_position
 		if _body.has_method("snapshot"):
@@ -33,6 +39,7 @@ func _process(delta: float) -> void:
 		return
 	var step := maxf(delta, 0.0)
 	_elapsed += step
+	_update_state_effects()
 	var grounded := _body.is_on_floor()
 	var speed := absf(_body.velocity.x)
 	var target_position := Vector2(0.0, -30.0)
@@ -55,19 +62,30 @@ func _process(delta: float) -> void:
 		target_stretch = Vector2(0.94, 1.08)
 	elif _celebration_remaining <= 0.0:
 		target_stretch = Vector2(1.05, 0.95)
+	if _landing_squash_remaining > 0.0:
+		_landing_squash_remaining = maxf(_landing_squash_remaining - step, 0.0)
+		var recovery := 1.0 - (_landing_squash_remaining / 0.16)
+		target_stretch *= Vector2(1.22, 0.78).lerp(Vector2.ONE, recovery)
 	var direction: float = _body.facing_direction if "facing_direction" in _body else 1.0
 	target_stretch.x *= direction
 	var smoothing := 1.0 - exp(-12.0 * step)
 	$Pose.position = $Pose.position.lerp(target_position, smoothing)
 	$Pose.rotation = lerpf($Pose.rotation, target_rotation, smoothing)
 	$Pose.scale = $Pose.scale.lerp(target_stretch, smoothing)
-	_update_state_effects()
 
 
 func _update_state_effects() -> void:
 	if not _body.has_method("snapshot"):
 		return
 	var state = _body.snapshot()
+	var just_landed := bool(state.just_landed)
+	if speed_presentation_enabled:
+		$Pose/SpeedStreak.visible = state.run_speed_ratio > 0.85
+		if just_landed and not _last_just_landed:
+			_landing_squash_remaining = 0.16
+	else:
+		$Pose/SpeedStreak.visible = false
+		_landing_squash_remaining = 0.0
 	if state.action_pressed and not _last_action_pressed:
 		_play_action_effect()
 	if _last_hearts >= 0 and state.hearts < _last_hearts:
@@ -75,6 +93,7 @@ func _update_state_effects() -> void:
 	elif _last_hearts >= 0 and state.hearts > _last_hearts and _body.global_position.distance_to(_last_body_position) > 40.0:
 		_play_recovery()
 	_last_action_pressed = state.action_pressed
+	_last_just_landed = just_landed
 	_last_hearts = state.hearts
 	_last_body_position = _body.global_position
 
