@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://levels/star_race_arena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://visual/hero_visual.tscn" id="10_hero_visual"]
 [ext_resource type="PackedScene" path="res://visual/finish_line_visual.tscn" id="11_finish_visual"]
 [ext_resource type="PackedScene" path="res://visual/checkpoint_visual.tscn" id="12_checkpoint_visual"]
+[ext_resource type="PackedScene" path="res://ui/star_race_hud.tscn" id="13_race_hud"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
 size = Vector2(3400, 80)
@@ -204,6 +205,8 @@ limit_bottom = 800
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="TouchControls" parent="HUD" instance=ExtResource("5_touch")]
+
+[node name="StarRaceHud" parent="HUD" instance=ExtResource("13_race_hud")]
 
 [node name="PartnerIndicator" type="Control" parent="HUD"]
 layout_mode = 0
