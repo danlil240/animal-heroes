@@ -88,6 +88,21 @@ func try_bubble(peer_id: int) -> bool:
 	return _defeat(peer_id)
 
 
+## Re-applies a snapshot entry from `SunnyForest.world_state_snapshot()` so a
+## reconnecting client can reconstruct enemy motion and defeat state without
+## re-emitting defeat signals.
+func restore_state(payload: Dictionary) -> void:
+	var state := String(payload.get("motion_state", motion_state))
+	motion_state = state
+	position = Vector2(payload.get("position", position))
+	velocity = Vector2(payload.get("velocity", velocity))
+	_state_elapsed = 0.0
+	_set_collision_enabled(state != DEFEATED)
+	if state == DEFEATED:
+		_defeat_emitted = true
+	_update_visual_state()
+
+
 func _step_beetle(step: float) -> void:
 	var next_x := position.x + _direction * patrol_speed * step
 	var left := _origin.x - patrol_range
@@ -151,8 +166,8 @@ func _on_body_entered(body: Node2D) -> void:
 
 
 func _set_collision_enabled(enabled: bool) -> void:
-	monitoring = enabled
-	monitorable = enabled
+	set_deferred("monitoring", enabled)
+	set_deferred("monitorable", enabled)
 	for child in get_children():
 		if child is CollisionShape2D:
 			(child as CollisionShape2D).set_deferred("disabled", not enabled)

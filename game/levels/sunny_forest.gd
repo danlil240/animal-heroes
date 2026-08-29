@@ -79,6 +79,8 @@ func activate_teamwork_part(gate_id: String, part_id: String, peer_id: int) -> b
 	if not _gates.has(gate_id):
 		return false
 	var gate = _gates[gate_id]
+	if gate_id == "bubble-grove" and gate.snapshot().get("active_parts", {}).values().has(peer_id):
+		return false
 	if not gate.mark_part(part_id, peer_id):
 		return false
 	var points: int = team_score.award("gate:%s" % gate_id, "teamwork")
@@ -140,6 +142,126 @@ func enter_finish(peer_id: int) -> bool:
 	if tree_visual != null and tree_visual.has_method("play_celebration"):
 		tree_visual.play_celebration()
 	coop_mode.complete_level()
+	return true
+
+
+func leave_finish(peer_id: int) -> void:
+	if not is_finished():
+		_finish_peers.erase(peer_id)
+
+
+## Host-owned authoritative snapshot of every shared mutable world object, used
+## to reconstruct level state after a reconnect. Contains score, collected ids,
+## the active checkpoint, both hero positions, enemy motion, gate state, bubble
+## ammo, in-flight projectiles, and the last applied world-event sequence.
+func world_state_snapshot() -> Dictionary:
+	var enemies: Array[Dictionary] = []
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy is EnemyActor:
+			enemies.append({
+				"enemy_id": String(enemy.enemy_id),
+				"enemy_kind": String(enemy.enemy_kind),
+				"motion_state": String(enemy.motion_state),
+				"position": enemy.position,
+				"velocity": enemy.velocity,
+			})
+	var gates: Dictionary = {}
+	for gate_id in _gates:
+		gates[gate_id] = _gates[gate_id].snapshot()
+	var projectiles: Array[Dictionary] = []
+	for bubble in get_tree().get_nodes_in_group("active_bubble"):
+		if bubble is BubbleProjectile and bubble.active:
+			projectiles.append({
+				"projectile_id": String(bubble.projectile_id),
+				"owner_peer_id": int(bubble.owner_peer_id),
+				"position": bubble.position,
+				"velocity": bubble.velocity,
+				"remaining": bubble.lifetime_remaining(),
+			})
+	return {
+		"score": team_score.total,
+		"collected_ids": team_score.snapshot()["awarded_ids"],
+		"checkpoint_id": coop_mode.current_checkpoint_id,
+		"heroes": {1: rabbit.global_position, 2: fox.global_position},
+		"enemies": enemies,
+		"gates": gates,
+		"ammo": bubble_ammo.snapshot(),
+		"projectiles": projectiles,
+		"event_sequence": _last_applied_world_event_sequence,
+	}
+
+
+## Replaces shared world state from a prior `world_state_snapshot()`. Rejects
+## snapshots taken after the level already finished. Restores score, ammo,
+## gates, enemies, hero positions, checkpoint, event sequence, and in-flight
+## projectiles exactly.
+func restore_world_state(snapshot: Dictionary) -> bool:
+	if is_finished():
+		return false
+	var score_data := {"total": int(snapshot.get("score", -1)), "awarded_ids": snapshot.get("collected_ids", [])}
+	if not team_score.restore(score_data):
+		return false
+	if not bubble_ammo.restore(snapshot.get("ammo", {})):
+		return false
+	var gates_data: Variant = snapshot.get("gates", null)
+	if not gates_data is Dictionary:
+		return false
+	for gate_id in gates_data:
+		if not _gates.has(gate_id) or not _gates[gate_id].restore(gates_data[gate_id]):
+			return false
+	if not _restore_enemy_state(snapshot.get("enemies", [])):
+		return false
+	var heroes_data: Variant = snapshot.get("heroes", null)
+	if heroes_data is Dictionary:
+		if heroes_data.has(1):
+			rabbit.global_position = Vector2(heroes_data[1])
+		if heroes_data.has(2):
+			fox.global_position = Vector2(heroes_data[2])
+	coop_mode.current_checkpoint_id = String(snapshot.get("checkpoint_id", ""))
+	_last_applied_world_event_sequence = int(snapshot.get("event_sequence", _last_applied_world_event_sequence))
+	if not _restore_projectiles(snapshot.get("projectiles", [])):
+		return false
+	_render_gameplay_hud()
+	return true
+
+
+func _restore_enemy_state(enemies_data: Variant) -> bool:
+	if not enemies_data is Array:
+		return false
+	var by_id: Dictionary = {}
+	for entry in enemies_data:
+		if entry is Dictionary:
+			by_id[String(entry.get("enemy_id", ""))] = entry
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if enemy is EnemyActor and by_id.has(String(enemy.enemy_id)):
+			enemy.restore_state(by_id[String(enemy.enemy_id)])
+	return true
+
+
+func _restore_projectiles(projectiles: Array) -> bool:
+	var active_bubbles: Array = []
+	for bubble in get_tree().get_nodes_in_group("active_bubble"):
+		if bubble is BubbleProjectile:
+			active_bubbles.append(bubble)
+	for bubble in active_bubbles:
+		bubble.remove_from_group("active_bubble")
+		_bubble_pool.release(bubble)
+	for payload in projectiles:
+		if not payload is Dictionary:
+			return false
+		var bubble = _bubble_pool.acquire()
+		if bubble == null:
+			return false
+		$Bubbles.add_child(bubble)
+		bubble.add_to_group("active_bubble")
+		if not bubble.released.is_connected(_on_bubble_released):
+			bubble.released.connect(_on_bubble_released)
+		if not bubble.enemy_hit.is_connected(_on_bubble_enemy_hit):
+			bubble.enemy_hit.connect(_on_bubble_enemy_hit)
+		if not bubble.restore_state(payload):
+			bubble.remove_from_group("active_bubble")
+			_bubble_pool.release(bubble)
+			return false
 	return true
 
 
@@ -211,6 +333,7 @@ func _on_exit_body_exited(body: Node2D) -> void:
 	if not body.has_method("respawn"):
 		return
 	_players_at_exit.erase(body.get_instance_id())
+	leave_finish(int(body.get("peer_id")))
 
 
 func _configure_gate(gate_id: String, parts: Array) -> void:

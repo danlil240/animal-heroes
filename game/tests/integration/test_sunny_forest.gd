@@ -177,18 +177,41 @@ func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
 	if level.activate_teamwork_part("bubble-grove", "left-flower", 1):
 		_fail("one pressure flower must not complete Bubble Grove")
 		return false
+	if level.activate_teamwork_part("bubble-grove", "right-flower", 1):
+		_fail("one hero must not complete both Bubble Grove pressure flowers")
+		return false
 	if not level.activate_teamwork_part("bubble-grove", "right-flower", 2):
 		_fail("both pressure flowers must open Bubble Grove")
 		return false
 	if not level.gate_is_open("bubble-grove") or level.team_score.total != 235:
 		_fail("pressure gate must award one 100-point teamwork bonus")
 		return false
+	var world_snapshot: Dictionary = level.world_state_snapshot()
+	for required_key in ["score", "collected_ids", "checkpoint_id", "heroes", "enemies", "gates", "ammo", "projectiles", "event_sequence"]:
+		if not world_snapshot.has(required_key):
+			_fail("Sunny Forest reconnect snapshot is missing %s" % required_key)
+			return false
+	if world_snapshot.get("enemies", []).size() < 4 or world_snapshot.get("projectiles", []).size() != 5:
+		_fail("snapshot must include enemy and active bubble world state")
+		return false
+	level.register_enemy_defeat("after-snapshot", 1)
+	level.grant_bubbles(1)
+	if not level.restore_world_state(world_snapshot):
+		_fail("valid Sunny Forest world snapshot must restore")
+		return false
+	if level.team_score.total != 235 or level.bubble_ammo.remaining(1) != 0 or level.active_bubble_count() != 5:
+		_fail("snapshot restore must replace score, ammo, and active projectiles")
+		return false
 	var results: Array[Dictionary] = []
 	level.level_finished.connect(func(result: Dictionary) -> void: results.append(result))
 	if level.enter_finish(1) or level.is_finished():
 		_fail("one hero cannot finish the cooperative level alone")
 		return false
-	if not level.enter_finish(2) or not level.is_finished():
+	level.leave_finish(1)
+	if level.enter_finish(2) or level.is_finished():
+		_fail("heroes must be at the magical tree together, not one after another")
+		return false
+	if not level.enter_finish(1) or not level.is_finished():
 		_fail("both heroes at the magical tree must finish the level")
 		return false
 	if results.size() != 1 or int(results[0].get("team_score", -1)) != 235:

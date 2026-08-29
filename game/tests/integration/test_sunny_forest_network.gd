@@ -9,7 +9,7 @@ func _init() -> void:
 ## shared world, while proving the valid request uses the normal production path.
 func _run() -> void:
 	var arena = load("res://levels/test_arena.tscn").instantiate()
-	arena.set_script(load("res://tests/support/test_world_level.gd"))
+	arena.set_script(load("res://tests/support/world_level_fixture.gd"))
 	root.add_child(arena)
 	await process_frame
 	if arena.process_world_action(0, 1, "push", "log", Vector2.ZERO):

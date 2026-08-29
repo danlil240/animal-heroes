@@ -70,14 +70,45 @@ func reset_for_pool() -> void:
 	position = Vector2.ZERO
 
 
+func lifetime_remaining() -> float:
+	return _remaining
+
+
+## Re-applies a snapshot entry from `SunnyForest.world_state_snapshot()` without
+## going through `launch()`, so a reconnecting client can reconstruct in-flight
+## projectiles at their authoritative mid-flight state.
+func restore_state(payload: Dictionary) -> bool:
+	var owner := int(payload.get("owner_peer_id", 0))
+	var proj_id := String(payload.get("projectile_id", ""))
+	if owner <= 0 or proj_id.is_empty():
+		return false
+	owner_peer_id = owner
+	projectile_id = proj_id
+	position = Vector2(payload.get("position", Vector2.ZERO))
+	velocity = Vector2(payload.get("velocity", Vector2.ZERO))
+	_remaining = maxf(float(payload.get("remaining", 0.0)), 0.0)
+	active = true
+	visible = true
+	monitoring = true
+	monitorable = true
+	return true
+
+
 func _finish() -> void:
 	if not active:
 		return
 	active = false
 	visible = false
-	monitoring = false
-	monitorable = false
+	set_deferred("monitoring", false)
+	set_deferred("monitorable", false)
 	velocity = Vector2.ZERO
+	if Engine.is_in_physics_frame():
+		call_deferred("_emit_released")
+	else:
+		_emit_released()
+
+
+func _emit_released() -> void:
 	released.emit(self)
 
 
