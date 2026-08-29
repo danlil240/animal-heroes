@@ -1,6 +1,16 @@
 extends SceneTree
 
 
+class TestInteraction extends Node2D:
+	var interaction_id: String = ""
+	var interaction_kind: String = "switch"
+	var interaction_priority: int = 0
+	var allowed: bool = true
+
+	func eligible_for(_hero: Node) -> bool:
+		return allowed
+
+
 func _init() -> void:
 	_test_object_pool_reuse()
 	_test_powerup_expiry()
@@ -11,6 +21,10 @@ func _init() -> void:
 	_test_team_score_rejects_duplicate_events()
 	_test_team_score_snapshot_round_trip()
 	_test_bubble_inventory_is_bounded_and_consumable()
+	_test_action_resolver_prefers_high_priority_target()
+	_test_action_resolver_rejects_ineligible_and_distant_targets()
+	_test_action_resolver_uses_stable_tie_break()
+	_test_interactable_character_eligibility()
 	quit(0)
 
 
@@ -257,6 +271,80 @@ func _test_bubble_inventory_is_bounded_and_consumable() -> void:
 		return
 	if restored.remaining(1) != 4 or restored.remaining(2) != 2:
 		_fail("bubble inventory snapshot must preserve each peer count")
+
+
+## Catches bubble firing while a nearby teamwork object should own the action.
+func _test_action_resolver_prefers_high_priority_target() -> void:
+	var resolver_script = load("res://player/action_resolver.gd")
+	if resolver_script == null:
+		_fail("action resolver must exist")
+		return
+	var hero := Node2D.new()
+	root.add_child(hero)
+	var bubble := _make_interaction("bubble", 10, Vector2(20, 0))
+	var gate := _make_interaction("gate", 100, Vector2(80, 0))
+	if resolver_script.new().select(hero, [bubble, gate]) != gate:
+		_fail("higher priority nearby teamwork target must beat bubble")
+
+
+## Catches activation of an object the hero cannot use or can no longer reach.
+func _test_action_resolver_rejects_ineligible_and_distant_targets() -> void:
+	var resolver_script = load("res://player/action_resolver.gd")
+	if resolver_script == null:
+		_fail("action resolver must exist")
+		return
+	var hero := Node2D.new()
+	root.add_child(hero)
+	var blocked := _make_interaction("blocked", 100, Vector2(20, 0))
+	blocked.allowed = false
+	var distant := _make_interaction("distant", 100, Vector2(200, 0))
+	var bubble := _make_interaction("bubble", 10, Vector2(40, 0))
+	if resolver_script.new().select(hero, [blocked, distant, bubble]) != bubble:
+		_fail("resolver must ignore ineligible and out-of-range targets")
+
+
+## Catches peer order changing which equal-distance target is selected.
+func _test_action_resolver_uses_stable_tie_break() -> void:
+	var resolver_script = load("res://player/action_resolver.gd")
+	if resolver_script == null:
+		_fail("action resolver must exist")
+		return
+	var hero := Node2D.new()
+	root.add_child(hero)
+	var first := _make_interaction("a", 50, Vector2(30, 0))
+	var second := _make_interaction("b", 50, Vector2(-30, 0))
+	var resolver = resolver_script.new()
+	if resolver.select(hero, [second, first]) != first:
+		_fail("equal targets must use stable interaction id order")
+		return
+	if resolver.select(hero, [first, second]) != first:
+		_fail("candidate array order must not affect target selection")
+
+
+## Catches Foxy's push target being offered to Riki, or Riki's switch being
+## offered to Foxy after the scene is replicated on the other tablet.
+func _test_interactable_character_eligibility() -> void:
+	var interactable = load("res://world/interactable.gd").new()
+	root.add_child(interactable)
+	var rabbit = _make_player_body(1)
+	var fox = _make_player_body(2)
+	fox.profile = load("res://player/fox_profile.tres")
+	interactable.required_character = "fox"
+	if interactable.eligible_for(rabbit) or not interactable.eligible_for(fox):
+		_fail("fox-only interaction must reject rabbit and accept fox")
+		return
+	interactable.required_character = "rabbit"
+	if not interactable.eligible_for(rabbit) or interactable.eligible_for(fox):
+		_fail("rabbit-only interaction must accept rabbit and reject fox")
+
+
+func _make_interaction(id: String, priority: int, at_position: Vector2) -> TestInteraction:
+	var interaction := TestInteraction.new()
+	interaction.interaction_id = id
+	interaction.interaction_priority = priority
+	interaction.position = at_position
+	root.add_child(interaction)
+	return interaction
 
 
 func _make_player_body(peer_id: int) -> Node:

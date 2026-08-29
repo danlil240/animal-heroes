@@ -5,6 +5,9 @@ extends Area2D
 signal activated(interactable_id: String, activator_peer_id: int)
 
 @export var interactable_id: String = ""
+@export_enum("switch", "push", "pickup", "finish") var interaction_kind: String = "switch"
+@export var interaction_priority: int = 50
+@export_enum("any", "rabbit", "fox") var required_character: String = "any"
 @export var requires_host_authority: bool = true
 @export var cooldown: float = 0.0
 @export var heavy: bool = false
@@ -33,6 +36,18 @@ func validate_proximity(player: Node, max_distance: float) -> bool:
 	if player == null or not (player is Node2D):
 		return false
 	return global_position.distance_to((player as Node2D).global_position) <= max_distance
+
+
+func eligible_for(player: Node) -> bool:
+	if player == null or not (player is Node2D):
+		return false
+	if required_character == "any":
+		return true
+	var player_profile: Variant = player.get("profile")
+	if player_profile == null:
+		return false
+	var is_fox: bool = bool(player_profile.get("can_push_heavy"))
+	return is_fox if required_character == "fox" else not is_fox
 
 
 func is_activated() -> bool:
