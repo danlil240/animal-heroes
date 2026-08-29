@@ -2,8 +2,16 @@ extends SceneTree
 
 
 func _init() -> void:
+	call_deferred("_run")
+
+
+func _run() -> void:
 	var passed := _test_spring_launch_and_cooldown()
 	passed = _test_spring_rejects_unknown_peer_and_recharges() and passed
+	var cooldown_driver_passed: bool = await _test_spring_cooldown_is_driven_by_level_physics()
+	passed = cooldown_driver_passed and passed
+	var camera_binding_passed: bool = await _test_rabbit_local_camera_receives_feedback_target()
+	passed = camera_binding_passed and passed
 	passed = _test_camera_feedback_look_ahead_and_impulse_cap() and passed
 	passed = _test_hero_visual_reveals_speed_streak_above_top_tier() and passed
 	quit(0 if passed else 1)
@@ -34,7 +42,7 @@ func _test_spring_launch_and_cooldown() -> bool:
 	return true
 
 
-## An invalid actor must not consume a launch; each valid peer recharges alone.
+## An invalid actor must not consume a launch; its local API can also be stepped directly.
 func _test_spring_rejects_unknown_peer_and_recharges() -> bool:
 	var spring_script = load("res://world/spring_pad.gd")
 	if spring_script == null:
@@ -63,6 +71,54 @@ func _test_spring_rejects_unknown_peer_and_recharges() -> bool:
 	return true
 
 
+## Placed springs must receive the level's fixed physics cadence without a scene-specific hook.
+func _test_spring_cooldown_is_driven_by_level_physics() -> bool:
+	var level_scene = load("res://levels/test_arena.tscn")
+	var spring_script = load("res://world/spring_pad.gd")
+	if level_scene == null or spring_script == null:
+		_fail("test arena and spring script must exist")
+		return false
+	var level = level_scene.instantiate()
+	var spring = spring_script.new()
+	spring.position = Vector2(-500.0, -500.0)
+	level.add_child(spring)
+	root.add_child(level)
+	await physics_frame
+	level.rabbit.peer_id = 1
+	if not spring.try_launch(level.rabbit):
+		_fail("placed spring must launch the local hero")
+		return false
+	for _tick in 20:
+		await physics_frame
+	if not spring.try_launch(level.rabbit):
+		_fail("level physics must expire a placed spring cooldown")
+		return false
+	level.free()
+	return true
+
+
+## The default rabbit-local role must bind an opted-in camera to its local hero.
+func _test_rabbit_local_camera_receives_feedback_target() -> bool:
+	var level_scene = load("res://levels/test_arena.tscn")
+	var camera_script = load("res://visual/camera_feedback.gd")
+	if level_scene == null or camera_script == null:
+		_fail("test arena and camera feedback script must exist")
+		return false
+	var level = level_scene.instantiate()
+	var camera = level.get_node_or_null("Rabbit/Camera2D")
+	if camera == null:
+		_fail("test arena rabbit camera must exist")
+		return false
+	camera.set_script(camera_script)
+	root.add_child(level)
+	await process_frame
+	if camera._hero != level.rabbit:
+		_fail("rabbit-local camera feedback must follow the rabbit")
+		return false
+	level.free()
+	return true
+
+
 ## High velocity looks ahead by the specified exponential response; a shake stays bounded.
 func _test_camera_feedback_look_ahead_and_impulse_cap() -> bool:
 	var camera_script = load("res://visual/camera_feedback.gd")
@@ -83,6 +139,15 @@ func _test_camera_feedback_look_ahead_and_impulse_cap() -> bool:
 	camera.advance_feedback(0.0)
 	if camera.position.y > 10.001:
 		_fail("camera impulse must be capped at 10 pixels")
+		return false
+	camera.advance_feedback(0.1)
+	if camera.position.y >= 10.0:
+		_fail("camera shake must decay without accumulating into camera position")
+		return false
+	for _tick in 8:
+		camera.advance_feedback(0.1)
+	if absf(camera.position.y) > 0.1:
+		_fail("camera shake must return to its base offset across multiple frames")
 		return false
 	hero.free()
 	camera.free()
@@ -107,8 +172,20 @@ func _test_hero_visual_reveals_speed_streak_above_top_tier() -> bool:
 		return false
 	hero.velocity.x = hero.profile.max_run_speed * 0.86
 	visual._process(0.0)
+	if streak.visible:
+		_fail("speed presentation must stay off until a level explicitly opts in")
+		return false
+	hero._just_landed = true
+	visual._process(0.0)
+	if visual._landing_squash_remaining > 0.0:
+		_fail("landing squash must stay off until a level explicitly opts in")
+		return false
+	hero._just_landed = false
+	visual._process(0.0)
+	visual.speed_presentation_enabled = true
+	visual._process(0.0)
 	if not streak.visible:
-		_fail("speed streak must show above the 0.85 run ratio")
+		_fail("opted-in speed presentation must show above the 0.85 run ratio")
 		return false
 	hero._just_landed = true
 	visual._process(0.0)

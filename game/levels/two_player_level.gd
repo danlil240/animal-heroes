@@ -65,6 +65,9 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	for spring in get_tree().get_nodes_in_group("spring_pad"):
+		if spring.has_method("host_step"):
+			spring.host_step(delta)
 	_step_level(delta)
 	route_control_frames()
 	apply_remote_desktop_frame(_desktop_remote_frame())
