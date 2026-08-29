@@ -169,7 +169,7 @@ func restore_state(payload: Dictionary) -> bool:
 		return false
 	if state == DEFEATED and (next_health != 0 or not is_zero_approx(next_hurt_remaining)):
 		return false
-	if state == HURT and (next_health <= 0 or next_hurt_remaining <= 0.0 or next_hurt_remaining > HURT_COOLDOWN):
+	if state == HURT and (next_health <= 0 or next_hurt_remaining <= 0.0 or next_hurt_remaining > HURT_COOLDOWN or next_velocity.length() > MAX_HIT_RECOIL):
 		return false
 	if state not in [DEFEATED, HURT] and (next_health <= 0 or not is_zero_approx(next_hurt_remaining)):
 		return false
@@ -240,6 +240,8 @@ func _defeat(peer_id: int) -> bool:
 	if motion_state == DEFEATED:
 		return false
 	motion_state = DEFEATED
+	health = 0
+	hurt_remaining = 0.0
 	velocity = Vector2.ZERO
 	_set_collision_enabled(false)
 	if not _defeat_emitted:

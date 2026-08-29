@@ -28,6 +28,7 @@ func _init() -> void:
 	_test_beetle_actor_patrol_contact_and_stomp()
 	_test_seed_actor_telegraphs_hops_and_accepts_bubble()
 	_test_enemy_durability_recoil_and_snapshot()
+	_test_enemy_defeat_snapshot_invariants()
 	_test_bubble_projectile_launch_move_hit_and_expire()
 	_test_bubble_projectile_pool_is_bounded_and_resets()
 	_test_teamwork_gate_requires_unique_known_parts()
@@ -498,6 +499,60 @@ func _test_enemy_durability_recoil_and_snapshot() -> void:
 		return
 	if restored.snapshot_state() != before:
 		_fail("failed enemy restore must not mutate the current state")
+
+
+## Catches defeated snapshots retaining health/cooldown state or accepting
+## oversized restored recoil.
+func _test_enemy_defeat_snapshot_invariants() -> void:
+	var scene: PackedScene = load("res://world/beetle_enemy.tscn")
+	var stomped = scene.instantiate()
+	stomped.enemy_id = "stomped-beetle"
+	root.add_child(stomped)
+	if not stomped.try_stomp(stomped.global_position + Vector2(0.0, -24.0), Vector2(0.0, 140.0), 1):
+		_fail("stomped beetle must enter defeated state")
+		return
+	if stomped.health != 0 or not is_zero_approx(stomped.hurt_remaining):
+		_fail("stomp defeat must clear health and hurt cooldown")
+		return
+	var restored_stomp = scene.instantiate()
+	restored_stomp.enemy_id = "restored-stomped-beetle"
+	root.add_child(restored_stomp)
+	var stomp_snapshot: Dictionary = stomped.snapshot_state()
+	stomp_snapshot["enemy_id"] = "restored-stomped-beetle"
+	if not restored_stomp.restore_state(stomp_snapshot):
+		_fail("stomped defeated snapshot must restore")
+		return
+	var hurt_then_stomp = scene.instantiate()
+	hurt_then_stomp.enemy_id = "hurt-stomped-beetle"
+	root.add_child(hurt_then_stomp)
+	if not hurt_then_stomp.try_bubble(1, Vector2(120.0, -40.0)):
+		_fail("beetle must accept the setup hurt hit")
+		return
+	if not hurt_then_stomp.try_stomp(hurt_then_stomp.global_position + Vector2(0.0, -24.0), Vector2(0.0, 140.0), 1):
+		_fail("stomp must still defeat a hurt beetle")
+		return
+	var restored_hurt_stomp = scene.instantiate()
+	restored_hurt_stomp.enemy_id = "restored-hurt-stomped-beetle"
+	root.add_child(restored_hurt_stomp)
+	var hurt_stomp_snapshot: Dictionary = hurt_then_stomp.snapshot_state()
+	hurt_stomp_snapshot["enemy_id"] = "restored-hurt-stomped-beetle"
+	if not restored_hurt_stomp.restore_state(hurt_stomp_snapshot):
+		_fail("hurt-then-stomp defeated snapshot must restore")
+		return
+	var hurt_receiver = scene.instantiate()
+	hurt_receiver.enemy_id = "hurt-velocity-beetle"
+	root.add_child(hurt_receiver)
+	if not hurt_receiver.try_bubble(1, Vector2(120.0, -40.0)):
+		_fail("beetle must accept the HURT snapshot setup hit")
+		return
+	var before: Dictionary = hurt_receiver.snapshot_state()
+	var oversized_recoil: Dictionary = before.duplicate(true)
+	oversized_recoil["velocity"] = Vector2(181.0, 0.0)
+	if hurt_receiver.restore_state(oversized_recoil):
+		_fail("HURT snapshots must reject recoil over 180 pixels per second")
+		return
+	if hurt_receiver.snapshot_state() != before:
+		_fail("rejected HURT recoil must not partially mutate enemy state")
 
 
 ## Catches invalid shots becoming active, projectile motion drifting from the
