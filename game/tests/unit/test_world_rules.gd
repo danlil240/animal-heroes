@@ -27,6 +27,8 @@ func _init() -> void:
 	_test_interactable_character_eligibility()
 	_test_beetle_actor_patrol_contact_and_stomp()
 	_test_seed_actor_telegraphs_hops_and_accepts_bubble()
+	_test_bubble_projectile_launch_move_hit_and_expire()
+	_test_bubble_projectile_pool_is_bounded_and_resets()
 	quit(0)
 
 
@@ -411,6 +413,82 @@ func _test_seed_actor_telegraphs_hops_and_accepts_bubble() -> void:
 		return
 	if seed.try_bubble(2):
 		_fail("defeated seed must reject repeated bubble hits")
+
+
+## Catches invalid shots becoming active, projectile motion drifting from the
+## host rule, bubbles damaging heroes, or one bubble hitting twice.
+func _test_bubble_projectile_launch_move_hit_and_expire() -> void:
+	var scene: PackedScene = load("res://world/bubble_projectile.tscn")
+	if scene == null:
+		_fail("bubble projectile scene must load")
+		return
+	var bubble = scene.instantiate()
+	root.add_child(bubble)
+	if bubble.launch(0, Vector2.ZERO, 1.0, 1):
+		_fail("bubble must reject invalid owner peer id")
+		return
+	if bubble.launch(1, Vector2.ZERO, 0.0, 1):
+		_fail("bubble must reject zero direction")
+		return
+	if not bubble.launch(1, Vector2(10, 20), 1.0, 7):
+		_fail("valid bubble launch must become active")
+		return
+	bubble.host_step(0.5)
+	if bubble.position != Vector2(190, 20):
+		_fail("bubble must move 180 pixels in half a second at fixed speed")
+		return
+	var player = _make_player_body(2)
+	if bubble.try_enemy_hit(player):
+		_fail("bubble projectile must never damage a hero")
+		return
+	var seed = load("res://world/seed_enemy.tscn").instantiate()
+	seed.configure("seed-hit", "seed")
+	root.add_child(seed)
+	var hits: Array[String] = []
+	bubble.enemy_hit.connect(func(enemy_id: String, owner_id: int, projectile_id: String) -> void:
+		hits.append("%s:%d:%s" % [enemy_id, owner_id, projectile_id]))
+	if not bubble.try_enemy_hit(seed):
+		_fail("active bubble must defeat an enemy that accepts bubble hits")
+		return
+	if bubble.try_enemy_hit(seed) or hits != ["seed-hit:1:bubble-7"]:
+		_fail("bubble must emit one enemy hit and then become inactive")
+		return
+	bubble.reset_for_pool()
+	var releases: Array[int] = []
+	bubble.released.connect(func(_node: Node) -> void: releases.append(1))
+	bubble.launch(1, Vector2.ZERO, -1.0, 8)
+	bubble.host_step(2.499)
+	if not bubble.active or not releases.is_empty():
+		_fail("bubble must remain active just inside its 2.5 second lifetime")
+		return
+	bubble.host_step(0.001)
+	if bubble.active or releases.size() != 1:
+		_fail("bubble must release exactly at its lifetime boundary")
+
+
+## Catches the level exceeding six simultaneous bubbles or a pooled projectile
+## retaining old owner/collision state when reused.
+func _test_bubble_projectile_pool_is_bounded_and_resets() -> void:
+	var pool = load("res://world/object_pool.gd").new()
+	pool.configure(load("res://world/bubble_projectile.tscn"), 6)
+	var acquired: Array[Node] = []
+	for index in 6:
+		var bubble: Node = pool.acquire()
+		if bubble == null:
+			_fail("pool must provide each of its six bubble slots")
+			return
+		bubble.launch(1, Vector2.ZERO, 1.0, index + 1)
+		acquired.append(bubble)
+	if pool.acquire() != null:
+		_fail("bubble pool must reject a seventh simultaneous projectile")
+		return
+	var first: Node = acquired[0]
+	pool.release(first)
+	if first.active or first.visible:
+		_fail("released bubble must reset active and visible state")
+		return
+	if pool.acquire() != first:
+		_fail("bubble pool must reuse the released projectile")
 
 
 func _make_interaction(id: String, priority: int, at_position: Vector2) -> TestInteraction:

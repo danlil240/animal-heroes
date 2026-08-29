@@ -37,6 +37,8 @@ func release(node: Node) -> void:
 	if node == null:
 		return
 	_active.erase(node)
+	if node.has_method("reset_for_pool"):
+		node.reset_for_pool()
 	if _available.size() < _capacity:
 		if node.get_parent() != null:
 			node.get_parent().remove_child(node)
