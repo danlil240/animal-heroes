@@ -197,19 +197,24 @@ func process_world_action(peer_id: int, request_sequence: int, action_id: String
 func publish_world_event(kind: String, payload: Dictionary) -> bool:
 	if not _is_world_authority() or kind.is_empty():
 		return false
-	_next_world_event_sequence += 1
-	if not apply_world_event(_next_world_event_sequence, kind, payload):
+	var prepared_payload: Variant = _prepare_world_event(kind, payload)
+	if not prepared_payload is Dictionary:
 		return false
+	var event_sequence := _next_world_event_sequence + 1
+	if not apply_world_event(event_sequence, kind, prepared_payload):
+		return false
+	_next_world_event_sequence = event_sequence
 	if _has_live_world_peer():
-		_receive_world_event.rpc(_next_world_event_sequence, kind, payload)
+		_receive_world_event.rpc(event_sequence, kind, prepared_payload)
 	return true
 
 
 func apply_world_event(event_sequence: int, kind: String, payload: Dictionary) -> bool:
 	if event_sequence <= _last_applied_world_event_sequence or kind.is_empty():
 		return false
+	if not _apply_world_event_accepted(event_sequence, kind, payload):
+		return false
 	_last_applied_world_event_sequence = event_sequence
-	_apply_world_event(event_sequence, kind, payload)
 	return true
 
 
@@ -259,6 +264,18 @@ func _present_level(_delta: float) -> void:
 
 func _validate_world_action(_peer_id: int, _action_id: String, _target_id: String, _hero_position: Vector2) -> Dictionary:
 	return {}
+
+
+func _prepare_world_event(_kind: String, payload: Dictionary) -> Dictionary:
+	return payload.duplicate(true)
+
+
+## Acceptance adapter for existing concrete levels. Levels with rejectable
+## mutations override this and return the real result; legacy void hooks keep
+## their prior accepted-event behavior.
+func _apply_world_event_accepted(sequence: int, kind: String, payload: Dictionary) -> bool:
+	_apply_world_event(sequence, kind, payload)
+	return true
 
 
 func _apply_world_event(_sequence: int, _kind: String, _payload: Dictionary) -> void:
@@ -324,7 +341,7 @@ func _clear_disconnected_remote_input() -> void:
 	if _has_live_world_peer():
 		_had_live_world_peer = true
 		return
-	if not _had_live_world_peer and not _has_remote_input:
+	if not _had_live_world_peer:
 		return
 	if _has_remote_input:
 		var remote = _remote_hero()

@@ -60,6 +60,8 @@ func _run() -> void:
 		return
 	if not _test_authoritative_star_and_enemy_score(level):
 		return
+	if not await _test_score_event_uses_host_combo_outcome():
+		return
 	if not _test_role_gated_fallen_log(level):
 		return
 	if not _test_bubble_inventory_and_pool(level):
@@ -116,6 +118,41 @@ func _test_authoritative_star_and_enemy_score(level: Node) -> bool:
 	if level.team_combo.multiplier != 2:
 		_fail("only the nonduplicate star and enemy scores must advance the combo")
 		return false
+	return true
+
+
+## Catches a receiver previewing its own jittered combo timer instead of using
+## the authoritative multiplier and resulting combo state carried by the event.
+func _test_score_event_uses_host_combo_outcome() -> bool:
+	var scene = load("res://levels/sunny_forest.tscn")
+	var host = scene.instantiate()
+	var receiver = scene.instantiate()
+	root.add_child(host)
+	root.add_child(receiver)
+	await process_frame
+	host.process_mode = Node.PROCESS_MODE_DISABLED
+	receiver.process_mode = Node.PROCESS_MODE_DISABLED
+	var payload: Dictionary = host._prepare_world_event("collect", {"target_id": "star-2"})
+	if payload.get("score_multiplier", 0) != 1 or payload.get("combo_state", {}) != {"multiplier": 1, "remaining": 2.5}:
+		_fail("host must carry its authoritative multiplier and resulting combo state")
+		return false
+	# Deliberately diverge receive-time state to the maximum active chain. The
+	# identical host event must still award 10 and restore the host's 1x outcome.
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	receiver.team_combo.commit_scored_event()
+	if not host.apply_world_event(1, "collect", payload) or not receiver.apply_world_event(1, "collect", payload):
+		_fail("the same authoritative score event must apply on host and receiver")
+		return false
+	if host.team_score.total != 10 or receiver.team_score.total != 10:
+		_fail("host and receiver must award the carried 1x score regardless of local timer")
+		return false
+	if host.team_combo.snapshot() != payload["combo_state"] or receiver.team_combo.snapshot() != payload["combo_state"]:
+		_fail("host and receiver must apply the carried resulting combo state exactly")
+		return false
+	host.queue_free()
+	receiver.queue_free()
 	return true
 
 

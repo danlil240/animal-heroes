@@ -70,8 +70,9 @@ func _present_level(_delta: float) -> void:
 		hud.show_context("bubble")
 
 
-func register_enemy_defeat(enemy_id: String, _peer_id: int) -> bool:
-	var points: int = _award_combo_score("enemy:%s" % enemy_id, "enemy")
+func register_enemy_defeat(enemy_id: String, _peer_id: int, score_payload: Dictionary = {}) -> bool:
+	var event_id := "enemy:%s" % enemy_id
+	var points: int = _award_authoritative_score(event_id, "enemy", score_payload) if not score_payload.is_empty() else _award_combo_score(event_id, "enemy")
 	if points <= 0:
 		return false
 	AudioDirector.play_gameplay_cue("enemy_defeat", _peer_id)
@@ -80,7 +81,7 @@ func register_enemy_defeat(enemy_id: String, _peer_id: int) -> bool:
 	return true
 
 
-func activate_teamwork_part(gate_id: String, part_id: String, peer_id: int) -> bool:
+func activate_teamwork_part(gate_id: String, part_id: String, peer_id: int, score_payload: Dictionary = {}) -> bool:
 	if not _gates.has(gate_id):
 		return false
 	var gate = _gates[gate_id]
@@ -88,7 +89,8 @@ func activate_teamwork_part(gate_id: String, part_id: String, peer_id: int) -> b
 		return false
 	if not gate.mark_part(part_id, peer_id):
 		return false
-	var points: int = _award_teamwork_score("gate:%s" % gate_id)
+	var event_id := "gate:%s" % gate_id
+	var points: int = _award_authoritative_score(event_id, "teamwork", score_payload) if not score_payload.is_empty() else _award_teamwork_score(event_id)
 	AudioDirector.play_gameplay_cue("teamwork")
 	_open_gate_barrier(gate_id)
 	_show_score_gain(points, Vector2.ZERO)
@@ -323,19 +325,51 @@ func _validate_world_action(peer_id: int, action_id: String, target_id: String, 
 	return {}
 
 
-func _apply_world_event(_sequence: int, kind: String, payload: Dictionary) -> void:
+func _prepare_world_event(kind: String, payload: Dictionary) -> Dictionary:
+	match kind:
+		"collect", "enemy_defeat":
+			return _with_authoritative_combo_score(payload)
+		"gate_part":
+			if _gate_part_will_complete(payload):
+				return _with_authoritative_combo_score(payload, true)
+	return payload.duplicate(true)
+
+
+func _apply_world_event_accepted(_sequence: int, kind: String, payload: Dictionary) -> bool:
 	match kind:
 		"collect":
 			var target_id := String(payload.get("target_id", ""))
-			collect_star(target_id, _star_node(target_id))
+			return collect_star(target_id, _star_node(target_id), payload)
 		"gate_part":
-			activate_teamwork_part(String(payload.get("gate_id", "")), String(payload.get("part_id", "")), int(payload.get("peer_id", 0)))
+			var gate_id := String(payload.get("gate_id", ""))
+			if not _gates.has(gate_id):
+				return false
+			var before: Dictionary = _gates[gate_id].snapshot()
+			activate_teamwork_part(gate_id, String(payload.get("part_id", "")), int(payload.get("peer_id", 0)), payload)
+			return _gates[gate_id].snapshot() != before
 		"bubble_grant":
-			grant_bubbles(int(payload.get("peer_id", 0)))
+			return grant_bubbles(int(payload.get("peer_id", 0))) > 0
 		"bubble_fire":
-			fire_bubble(int(payload.get("peer_id", 0)), Vector2(payload.get("origin", Vector2.ZERO)), float(payload.get("direction", 0.0)))
+			return fire_bubble(int(payload.get("peer_id", 0)), Vector2(payload.get("origin", Vector2.ZERO)), float(payload.get("direction", 0.0)))
+		"enemy_defeat":
+			return register_enemy_defeat(String(payload.get("enemy_id", "")), int(payload.get("peer_id", 0)), payload)
 		"finish":
+			var before_count := _finish_peers.size()
+			var was_finished := is_finished()
 			enter_finish(int(payload.get("peer_id", 0)))
+			return _finish_peers.size() != before_count or is_finished() != was_finished
+	return false
+
+
+func _gate_part_will_complete(payload: Dictionary) -> bool:
+	var gate_id := String(payload.get("gate_id", ""))
+	var part_id := String(payload.get("part_id", ""))
+	if not _gates.has(gate_id):
+		return false
+	var state: Dictionary = _gates[gate_id].snapshot()
+	var required: Array = state.get("required_parts", [])
+	var active: Dictionary = state.get("active_parts", {})
+	return not bool(state.get("completed", false)) and required.has(part_id) and not active.has(part_id) and active.size() + 1 == required.size()
 
 
 func _on_collectible_entered(body: Node2D, collectible: Area2D) -> void:
@@ -379,7 +413,8 @@ func _open_gate_barrier(gate_id: String) -> void:
 
 
 func _on_enemy_defeated(enemy_id: String, peer_id: int) -> void:
-	register_enemy_defeat(enemy_id, peer_id)
+	if _is_world_authority():
+		publish_world_event("enemy_defeat", {"enemy_id": enemy_id, "peer_id": peer_id})
 
 
 func _on_enemy_player_hit(_enemy_id: String, peer_id: int) -> void:

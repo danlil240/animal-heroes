@@ -16,6 +16,8 @@ func _run() -> void:
 		return
 	if not await _test_spread_is_atomic_and_consumes_one_charge():
 		return
+	if not await _test_offline_second_player_held_action_survives_physics_cleanup():
+		return
 	quit(0)
 
 
@@ -84,6 +86,26 @@ func _test_remote_held_action_is_host_driven() -> bool:
 	return true
 
 
+## Catches disconnect cleanup treating a stale remote-input marker as proof of
+## a live-peer transition and clearing ordinary offline second-player input
+## before Sunny Forest can inspect it in the real physics cadence.
+func _test_offline_second_player_held_action_survives_physics_cleanup() -> bool:
+	var level = await _make_level()
+	level.process_mode = Node.PROCESS_MODE_INHERIT
+	var fox = level.get_node("Fox")
+	fox.global_position = Vector2(400, 640)
+	fox.facing_direction = 1.0
+	fox.apply_input(_frame(true))
+	level._has_remote_input = true
+	level._had_live_world_peer = false
+	level._physics_process(0.0)
+	if level.active_bubble_count() != 1:
+		return _fail_bool("offline second-player held input must survive cleanup until Sunny Forest inspects it")
+	level.queue_free()
+	await process_frame
+	return true
+
+
 ## Catches spread publication exposing a partial fan or spending its charge
 ## before all three members have been acquired successfully.
 func _test_spread_is_atomic_and_consumes_one_charge() -> bool:
@@ -111,10 +133,18 @@ func _test_spread_is_atomic_and_consumes_one_charge() -> bool:
 			return _fail_bool("basic setup shot %d must be accepted" % shot)
 	level.grant_bubbles(1)
 	var charge_before: int = level.bubble_ammo.remaining(1)
-	if level.fire_bubble(1, Vector2(400, 640), 1.0):
-		return _fail_bool("spread sequence must fail when all three pool members are unavailable")
+	var sequence_before: int = level.last_world_event_sequence()
+	var rejected: bool = level.publish_world_event("bubble_fire", {
+		"peer_id": 1,
+		"origin": Vector2(400, 640),
+		"direction": 1.0,
+	})
+	if rejected:
+		return _fail_bool("spread publication must report rejection when all three pool members are unavailable")
 	if level.active_bubble_count() != 5 or level.bubble_ammo.remaining(1) != charge_before:
 		return _fail_bool("failed spread must release partial members and preserve its charge")
+	if level.last_world_event_sequence() != sequence_before or level._next_world_event_sequence != sequence_before:
+		return _fail_bool("rejected spread must not advance or expose a client world-event sequence")
 	level.queue_free()
 	await process_frame
 	return true
