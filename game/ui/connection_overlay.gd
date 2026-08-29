@@ -25,7 +25,9 @@ func _ready() -> void:
 
 func show_state(state: String) -> void:
 	get_node("Panel/Status").text = STATE_MESSAGES.get(state, "")
-	visible = state != "idle"
+	# "playing" and "idle" both hide the overlay — gameplay has started
+	# (or no session is active). Only connection-phase states show it.
+	visible = state != "idle" and state != "playing"
 	if state != "discovering":
 		get_node("Panel/ManualIp").visible = false
 

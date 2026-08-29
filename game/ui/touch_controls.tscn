@@ -12,7 +12,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-layout_direction = 1
+layout_direction = 2
 mouse_filter = 2
 theme = ExtResource("2_theme")
 script = ExtResource("1_touch")
@@ -42,7 +42,7 @@ offset_right = 288.0
 offset_bottom = -24.0
 grow_vertical = 0
 theme_override_constants/separation = 8
-layout_direction = 1
+layout_direction = 2
 
 [node name="Left" type="Button" parent="Movement"]
 custom_minimum_size = Vector2(128, 128)
@@ -75,7 +75,7 @@ text = "קפיצה"
 icon = ExtResource("3_jump")
 expand_icon = true
 icon_max_width = 52
-layout_direction = 1
+layout_direction = 2
 text_direction = 2
 
 [node name="Action" type="Button" parent="."]
@@ -97,5 +97,5 @@ text = "פעולה"
 icon = ExtResource("4_action")
 expand_icon = true
 icon_max_width = 52
-layout_direction = 1
+layout_direction = 2
 text_direction = 2

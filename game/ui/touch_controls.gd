@@ -17,7 +17,18 @@ var _keyboard: Dictionary = {LEFT: false, RIGHT: false, JUMP: false, ACTION: fal
 
 
 func _ready() -> void:
+	_force_ltr_layout()
 	$Pause.pressed.connect(func() -> void: pause_requested.emit())
+
+
+## Gameplay controls must stay physically fixed in every language. A
+## locale-driven layout direction mirrors the Movement container on a Hebrew
+## tablet, which puts the left button on the right half of the screen and makes
+## the touch controls drive the opposite way from the other tablet.
+func _force_ltr_layout() -> void:
+	layout_direction = Control.LAYOUT_DIRECTION_LTR
+	for control in [$Movement, $Jump, $Action]:
+		(control as Control).layout_direction = Control.LAYOUT_DIRECTION_LTR
 
 
 func input_frame() -> PlayerInputScript.InputFrame:

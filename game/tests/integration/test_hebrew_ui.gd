@@ -37,7 +37,44 @@ func _run() -> void:
 		return
 	if not await _test_simultaneous_touch_and_keyboard():
 		return
+	if not await _test_touch_controls_never_mirror():
+		return
 	quit(0)
+
+
+## The tablets run with a Hebrew system locale. A locale-driven layout direction
+## mirrors the movement container, so the left button lands on the right half of
+## the screen and that tablet drives the opposite way from its partner. The
+## gameplay controls must stay pinned to LTR whatever the locale is.
+func _test_touch_controls_never_mirror() -> bool:
+	var previous_locale := TranslationServer.get_locale()
+	TranslationServer.set_locale("he")
+	var controls = load("res://ui/touch_controls.tscn").instantiate()
+	_prepare_layout(controls, TARGET_LAYOUTS[0])
+	root.add_child(controls)
+	await process_frame
+	var failure := ""
+	if controls.layout_direction != Control.LAYOUT_DIRECTION_LTR:
+		failure = "touch controls must pin themselves to LTR under a Hebrew locale"
+	elif controls.get_node("Movement").layout_direction != Control.LAYOUT_DIRECTION_LTR:
+		failure = "movement container must pin itself to LTR under a Hebrew locale"
+	else:
+		# Compare positions relatively: the control is a direct child of the test
+		# window, whose RTL context offsets the whole rect, so only the ordering
+		# inside the control is meaningful here.
+		var left_x: float = controls.get_node("Movement/Left").get_global_rect().get_center().x
+		var right_x: float = controls.get_node("Movement/Right").get_global_rect().get_center().x
+		var jump_x: float = controls.get_node("Jump").get_global_rect().get_center().x
+		if left_x >= right_x:
+			failure = "left button must stay left of the right button under a Hebrew locale"
+		elif jump_x <= right_x:
+			failure = "jump must stay right of the movement buttons under a Hebrew locale"
+	root.remove_child(controls)
+	controls.queue_free()
+	TranslationServer.set_locale(previous_locale)
+	if not failure.is_empty():
+		return _fail_bool(failure)
+	return true
 
 
 func _test_menu_layout(layout: Vector2) -> bool:
@@ -105,6 +142,12 @@ func _test_touch_layout(layout: Vector2) -> bool:
 	var screen_midpoint := layout.x * 0.5
 	if controls.get_node("Movement/Left").get_global_rect().get_center().x >= screen_midpoint or controls.get_node("Movement/Right").get_global_rect().get_center().x >= screen_midpoint:
 		return _fail_bool("movement controls must remain on the lower-left at %s" % layout)
+	# Directional controls must never mirror with the locale: both tablets have
+	# to drive the same way, so the left button stays physically on the left.
+	var left_center_x: float = controls.get_node("Movement/Left").get_global_rect().get_center().x
+	var right_center_x: float = controls.get_node("Movement/Right").get_global_rect().get_center().x
+	if left_center_x >= right_center_x:
+		return _fail_bool("left movement button must stay left of the right button at %s" % layout)
 	if controls.get_node("Jump").get_global_rect().get_center().x <= screen_midpoint or controls.get_node("Action").get_global_rect().get_center().x <= screen_midpoint:
 		return _fail_bool("jump and action controls must remain on the lower-right at %s" % layout)
 	root.remove_child(controls)
