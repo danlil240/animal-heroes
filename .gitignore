@@ -7,3 +7,23 @@ game/.godot/
 *.gd.uid
 __pycache__/
 graphify-out/
+
+# Secrets — never commit credentials, keystores, or key material.
+# The release keystore lives outside the repo (~/keystores/); its password
+# lives only in GNOME Keyring. These patterns are a backstop.
+*.jks
+*.keystore
+*.kdbx
+*.p12
+*.pfx
+*.pem
+*.key
+*.crt
+.env
+.env.*
+*credentials*
+*credential*
+secrets.json
+secret.json
+password.txt
+release/paired_devices.json
