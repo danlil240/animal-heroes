@@ -27,6 +27,9 @@ var _previous_action_held: Dictionary = {1: false, 2: false}
 var _fire_remaining: Dictionary = {1: 0.0, 2: 0.0}
 var _interaction_claims: Dictionary = {}
 var _pool_exhaustion_reported: bool = false
+var _discovered_secrets: Dictionary = {}
+var _secret_triggers: Dictionary = {}
+var _brambles: Dictionary = {}
 
 
 func _setup_coop_level() -> void:
@@ -42,6 +45,17 @@ func _setup_coop_level() -> void:
 			enemy.defeated.connect(_on_enemy_defeated)
 		if enemy.has_signal("player_hit"):
 			enemy.player_hit.connect(_on_enemy_player_hit)
+	for trigger in get_tree().get_nodes_in_group("secret"):
+		if trigger.has_signal("discovered") and trigger.has_method("snapshot_state"):
+			var sid := String(trigger.get("secret_id"))
+			if not sid.is_empty():
+				_secret_triggers[sid] = trigger
+				trigger.discovered.connect(_on_secret_discovered)
+	for bramble in get_tree().get_nodes_in_group("bramble"):
+		if bramble.has_signal("broken") and bramble.has_method("snapshot_state"):
+			var bid := String(bramble.get("bramble_id"))
+			if not bid.is_empty():
+				_brambles[bid] = bramble
 
 
 func _step_level(delta: float) -> void:
@@ -104,6 +118,38 @@ func activate_teamwork_part(gate_id: String, part_id: String, peer_id: int, scor
 
 func gate_is_open(gate_id: String) -> bool:
 	return _gates.has(gate_id) and _gates[gate_id].is_complete()
+
+
+func discover_secret(secret_id: String, peer_id: int, score_payload: Dictionary = {}) -> bool:
+	if secret_id.is_empty() or (peer_id != 1 and peer_id != 2):
+		return false
+	if _discovered_secrets.has(secret_id):
+		return false
+	_discovered_secrets[secret_id] = true
+	var event_id := "secret:%s" % secret_id
+	var points: int = _award_authoritative_score(event_id, "secret", score_payload) if not score_payload.is_empty() else _award_combo_score(event_id, "secret")
+	if points <= 0:
+		_discovered_secrets.erase(secret_id)
+		return false
+	AudioDirector.play_gameplay_cue("secret", peer_id)
+	_show_score_gain(points, Vector2.ZERO)
+	_render_gameplay_hud()
+	return true
+
+
+func discovered_secret_count() -> int:
+	return _discovered_secrets.size()
+
+
+func secrets_total() -> int:
+	return _secret_triggers.size()
+
+
+func _completion_payload_extras() -> Dictionary:
+	return {
+		"secrets_found": discovered_secret_count(),
+		"secrets_total": secrets_total(),
+	}
 
 
 func grant_bubbles(peer_id: int) -> int:
@@ -331,7 +377,7 @@ func _validate_world_action(peer_id: int, action_id: String, target_id: String, 
 
 func _prepare_world_event(kind: String, payload: Dictionary) -> Dictionary:
 	match kind:
-		"collect", "enemy_defeat":
+		"collect", "enemy_defeat", "secret_discovered":
 			return _with_authoritative_combo_score(payload)
 		"gate_part":
 			return _with_authoritative_combo_score(payload, true)
@@ -356,6 +402,8 @@ func _apply_world_event_accepted(_sequence: int, kind: String, payload: Dictiona
 			return fire_bubble(int(payload.get("peer_id", 0)), Vector2(payload.get("origin", Vector2.ZERO)), float(payload.get("direction", 0.0)))
 		"enemy_defeat":
 			return register_enemy_defeat(String(payload.get("enemy_id", "")), int(payload.get("peer_id", 0)), payload)
+		"secret_discovered":
+			return discover_secret(String(payload.get("secret_id", "")), int(payload.get("peer_id", 0)), payload)
 		"finish":
 			var before_count := _finish_peers.size()
 			var was_finished := is_finished()
@@ -407,6 +455,11 @@ func _open_gate_barrier(gate_id: String) -> void:
 func _on_enemy_defeated(enemy_id: String, peer_id: int) -> void:
 	if _is_world_authority():
 		publish_world_event("enemy_defeat", {"enemy_id": enemy_id, "peer_id": peer_id})
+
+
+func _on_secret_discovered(secret_id: String, peer_id: int) -> void:
+	if _is_world_authority():
+		publish_world_event("secret_discovered", {"secret_id": secret_id, "peer_id": peer_id})
 
 
 func _on_enemy_player_hit(_enemy_id: String, peer_id: int) -> void:

@@ -179,7 +179,7 @@ func _checkpoint_position(checkpoint_id: String) -> Vector2:
 
 
 func _on_coop_level_completed(completed_level_id: String) -> void:
-	finish_level({
+	var payload := {
 		"mode": "coop",
 		"level_id": completed_level_id,
 		"next_level_id": next_campaign_level(completed_level_id),
@@ -189,7 +189,15 @@ func _on_coop_level_completed(completed_level_id: String) -> void:
 		"scores": {},
 		"team_score": team_score.total,
 		"stars_collected": _collected_stars,
-	})
+	}
+	payload.merge(_completion_payload_extras(), true)
+	finish_level(payload)
+
+
+## Override to add level-specific completion fields without changing the shared
+## results-screen contract.
+func _completion_payload_extras() -> Dictionary:
+	return {}
 
 
 func _on_coop_campaign_completed(unlocked_levels: Array) -> void:
