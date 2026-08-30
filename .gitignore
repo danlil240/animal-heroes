@@ -31,3 +31,13 @@ release/paired_devices.json
 # Visual test output — baselines are tracked, run artifacts are not.
 test-output/*
 !test-output/baselines/
+
+# Godot in-engine test harness staging dir (run_visual_tests.py relocates
+# screenshots to repo-root test-output/; nothing here should be tracked).
+game/test-output/
+
+# Smoke evidence — curated *.md summaries are tracked release evidence;
+# raw device snapshots (*.txt, run-duration-seconds.txt, apk-sha256.txt)
+# are per-run artifacts parsed into the .md files.
+docs/test-results/*
+!docs/test-results/*.md

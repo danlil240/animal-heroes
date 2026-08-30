@@ -113,6 +113,9 @@ func play_sfx(path: String, is_projectile: bool = false) -> void:
 	player.stream = load(path)
 	player.play()
 	if is_projectile:
+		if player.finished.is_connected(_on_projectile_voice_finished):
+			player.finished.disconnect(_on_projectile_voice_finished)
+			_projectile_voices_in_use = maxi(_projectile_voices_in_use - 1, 0)
 		player.finished.connect(_on_projectile_voice_finished, CONNECT_ONE_SHOT)
 
 
