@@ -6,6 +6,7 @@ extends SceneTree
 # entity budgets and processes without errors.
 
 const CLOUD_FACTORY_SCENE := "res://levels/cloud_factory.tscn"
+const SUNNY_FOREST_SCENE := "res://levels/sunny_forest.tscn"
 const MAX_ENEMY_BUDGET := 12
 const MAX_PROJECTILE_BUDGET := 24
 const MAX_PARTICLE_BUDGET := 80
@@ -20,27 +21,39 @@ func _init() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	var scene := load(CLOUD_FACTORY_SCENE)
-	if scene == null:
-		_fail("Cloud Factory scene must load for performance capture")
+	# Cloud Factory remains the worst-case scene for entity density.
+	if not await _validate_scene(CLOUD_FACTORY_SCENE):
 		return
+	# Sunny Forest must also stay within the shared campaign budgets after
+	# the re-authoring and secret/bramble additions.
+	if not await _validate_scene(SUNNY_FOREST_SCENE):
+		return
+	quit(0)
+
+
+func _validate_scene(scene_path: String) -> bool:
+	var scene := load(scene_path)
+	if scene == null:
+		_fail("%s scene must load for performance capture" % scene_path)
+		return false
 	_level = scene.instantiate()
 	root.add_child(_level)
 	await process_frame
 	if not _validate_budgets():
 		_cleanup()
-		return
-	# Sample frames to detect processing errors
+		return false
+	_elapsed = 0.0
+	_frame_count = 0
 	while _elapsed < SAMPLE_DURATION:
 		await process_frame
 		_elapsed += root.get_process_delta_time()
 		_frame_count += 1
 	if _frame_count < int(SAMPLE_DURATION * 20.0):
-		_fail("performance capture produced too few frames: %d" % _frame_count)
+		_fail("performance capture produced too few frames for %s: %d" % [scene_path, _frame_count])
 		_cleanup()
-		return
+		return false
 	_cleanup()
-	quit(0)
+	return true
 
 func _validate_budgets() -> bool:
 	if _level.get("enemy_budget") == null or _level.enemy_budget > MAX_ENEMY_BUDGET:

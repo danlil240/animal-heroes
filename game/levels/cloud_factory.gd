@@ -4,9 +4,12 @@ extends CoopLevel
 ## Cooperative level 3: host-authored fan and conveyor forces feeding the boss
 ## entrance, with explicit entity budgets for the SM-T220 performance floor.
 
-@export var enemy_budget: int = 10
-@export var projectile_budget: int = 20
-@export var particle_budget: int = 64
+# Budget overrides for Cloud Factory (defaults live on CoopLevel).
+func _ready() -> void:
+	enemy_budget = 10
+	projectile_budget = 20
+	particle_budget = 64
+	super._ready()
 
 @onready var boss_entrance = $BossEntrance
 

@@ -13,6 +13,12 @@ const BubbleInventoryScript := preload("res://player/bubble_inventory.gd")
 ## Campaign identifier for this level; set on the scene root.
 @export var level_id: String = ""
 
+## Entity budgets for performance gating. Defaults match the shared campaign
+## ceiling; individual levels may override in their scene or script.
+@export var enemy_budget: int = 12
+@export var projectile_budget: int = 24
+@export var particle_budget: int = 80
+
 var coop_mode: RefCounted = null
 var team_score: RefCounted = null
 var team_combo: RefCounted = null
