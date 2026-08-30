@@ -1,9 +1,9 @@
 class_name BuildInfo
 extends RefCounted
 
-const VERSION_NAME := "1.0.0-dev.1"
-const VERSION_CODE := 1
-const APPLICATION_PROTOCOL_VERSION := 1
+const VERSION_NAME := "1.0.0-dev.2"
+const VERSION_CODE := 2
+const APPLICATION_PROTOCOL_VERSION := 2
 const SAVE_SCHEMA_VERSION := 1
 const SAVE_SCHEMA_COMPATIBLE_MIN := 1
 const SAVE_SCHEMA_COMPATIBLE_MAX := 1

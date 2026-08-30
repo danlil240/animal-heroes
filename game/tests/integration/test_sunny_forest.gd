@@ -331,7 +331,7 @@ func _test_pressure_gate_and_two_player_finish(level: Node) -> bool:
 		_fail("pressure gate must award one 100-point teamwork bonus")
 		return false
 	var world_snapshot: Dictionary = level.world_state_snapshot()
-	for required_key in ["score", "collected_ids", "combo", "checkpoint_id", "heroes", "enemies", "gates", "ammo", "projectiles", "event_sequence"]:
+	for required_key in ["score", "collected_ids", "combo", "checkpoint_id", "heroes", "enemies", "gates", "ammo", "projectiles", "secrets", "brambles", "event_sequence"]:
 		if not world_snapshot.has(required_key):
 			_fail("Sunny Forest reconnect snapshot is missing %s" % required_key)
 			return false

@@ -125,7 +125,8 @@ func _with_authoritative_combo_score(payload: Dictionary, teamwork: bool = false
 
 
 ## Applies a host-carried score and combo result. Validate the compact combo
-## outcome before changing score; full rich restore atomicity remains Task 8.
+## outcome before changing score; rich restore atomicity is implemented in
+## SunnyForest.restore_world_state (validation-before-mutation, protocol 2).
 func _award_authoritative_score(event_id: String, category: String, payload: Dictionary) -> int:
 	var multiplier_value: Variant = payload.get("score_multiplier", null)
 	var combo_value: Variant = payload.get("combo_state", null)
