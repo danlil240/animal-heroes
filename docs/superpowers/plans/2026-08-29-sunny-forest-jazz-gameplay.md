@@ -70,7 +70,7 @@
 - Consumes: PlayerInput.InputFrame and PlayerBody.physics_step(delta).
 - Produces: profile fields max_run_speed, ground_acceleration, ground_deceleration, air_acceleration, jump_cut_gravity_multiplier; PlayerBody.apply_stomp_rebound(); snapshot fields run_speed_ratio and just_landed.
 
-- [ ] **Step 1: Write the failing fixed-step movement test**
+- [x] **Step 1: Write the failing fixed-step movement test**
 
 Create a SceneTree test with floor collision and 30 Hz stepping. Include these assertions:
 
@@ -104,7 +104,7 @@ if body.velocity.y >= -300.0:
 
 Add fixed-step helpers that compare a held jump with a one-tick tap and require held height >= 1.25 times tapped height. Assert reversal brakes before accelerating and air acceleration is lower than ground acceleration.
 
-- [ ] **Step 2: Run the new test in red state**
+- [x] **Step 2: Run the new test in red state**
 
 Run:
 
@@ -114,7 +114,7 @@ godot --headless --path game -s res://tests/unit/test_momentum_movement.gd
 
 Expected: FAIL because max_run_speed and apply_stomp_rebound do not exist.
 
-- [ ] **Step 3: Implement the minimal model**
+- [x] **Step 3: Implement the minimal model**
 
 Add typed exports:
 
@@ -141,7 +141,7 @@ if not _jump_pressed and velocity.y < 0.0:
 
 Add STOMP_REBOUND_SPEED = 340.0 and apply_stomp_rebound(). EnemyActor calls it after a stomp. Snapshot run_speed_ratio is abs(velocity.x)/max_run_speed; just_landed is true for exactly one air-to-floor physics step.
 
-- [ ] **Step 4: Run movement regressions**
+- [x] **Step 4: Run movement regressions**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_momentum_movement.gd
@@ -151,7 +151,7 @@ godot --headless --path game -s res://tests/integration/test_player_scene.gd
 
 Expected: all commands exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add game/player game/world/enemy_actor.gd game/tests/unit/test_momentum_movement.gd game/tests/unit/test_player_rules.gd
@@ -177,7 +177,7 @@ git commit -m "feat: add momentum platforming movement"
 - Consumes: PlayerBody.velocity, run_speed_ratio, just_landed, and local Camera2D.
 - Produces: SpringPad.try_launch(body) -> bool, launched(peer_id), CameraFeedback.add_impulse(amount).
 
-- [ ] **Step 1: Write the failing spring test**
+- [x] **Step 1: Write the failing spring test**
 
 ~~~gdscript
 var spring = load("res://world/spring_pad.gd").new()
@@ -196,7 +196,7 @@ if spring.try_launch(hero):
 	return
 ~~~
 
-- [ ] **Step 2: Run it in red state**
+- [x] **Step 2: Run it in red state**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_spring_and_secrets.gd
@@ -204,7 +204,7 @@ godot --headless --path game -s res://tests/unit/test_spring_and_secrets.gd
 
 Expected: FAIL because spring_pad.gd does not exist.
 
-- [ ] **Step 3: Implement spring and local feedback**
+- [x] **Step 3: Implement spring and local feedback**
 
 Implement SpringPad as Area2D with exported launch_velocity, 0.25 second per-peer cooldown, body_entered connection, host_step(delta), and launched signal. Only peer ids 1 or 2 are accepted. Add an original leaf-and-coil SVG and local compress/extend animation.
 
@@ -219,7 +219,7 @@ position += _impulse
 
 Clamp add_impulse to 10 px. Attach feedback from TwoPlayerLevel without changing camera ownership. HeroVisual shows the speed streak above 0.85 run ratio and triggers one landing squash when just_landed becomes true.
 
-- [ ] **Step 4: Run focused regressions**
+- [x] **Step 4: Run focused regressions**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_spring_and_secrets.gd
@@ -229,7 +229,7 @@ godot --headless --path game -s res://tests/integration/test_player_scene.gd
 
 Expected: all commands exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add game/world/spring_pad.gd game/world/spring_pad.tscn game/visual/camera_feedback.gd game/visual/hero_visual.gd game/visual/hero_visual.tscn game/art/objects/spring_pad.svg game/art/effects/speed_streak.svg game/levels/two_player_level.gd game/tests/unit/test_spring_and_secrets.gd
@@ -250,7 +250,7 @@ git commit -m "feat: add spring traversal feedback"
 - Consumes: ObjectPool acquire/release and projectile host_step.
 - Produces: BubbleInventory.grant_spread(peer_id, amount := 10), consume_spread(peer_id), kind(peer_id), snapshot/restore; BubbleProjectile.launch(owner_id, origin, shot_velocity, sequence, kind, fan_index).
 
-- [ ] **Step 1: Replace old five-ammo tests with failing powered-fire tests**
+- [x] **Step 1: Replace old five-ammo tests with failing powered-fire tests**
 
 ~~~gdscript
 var inventory = load("res://player/bubble_inventory.gd").new()
@@ -272,7 +272,7 @@ if bubble.projectile_kind != "spread" or bubble.fan_index != -1:
 
 Also assert restore rejects unknown kinds, peers outside 1/2, counts above ten, and duplicate malformed entries.
 
-- [ ] **Step 2: Run in red state**
+- [x] **Step 2: Run in red state**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_world_rules.gd
@@ -280,7 +280,7 @@ godot --headless --path game -s res://tests/unit/test_world_rules.gd
 
 Expected: FAIL on missing APIs.
 
-- [ ] **Step 3: Implement the bounded weapon model**
+- [x] **Step 3: Implement the bounded weapon model**
 
 Use BASIC = basic, SPREAD = spread, MAX_POWERED_SHOTS = 10. Store only powered entries. kind() returns basic at zero. Snapshot deep-copies entries shaped as {kind, remaining}; restore validates all values before replacing state.
 
@@ -308,7 +308,7 @@ func launch(owner_id: int, origin: Vector2, shot_velocity: Vector2, sequence: in
 
 Reset and restore projectile kind/fan identity. Tint and scale spread shots without a second scene.
 
-- [ ] **Step 4: Run tests and import**
+- [x] **Step 4: Run tests and import**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_world_rules.gd
@@ -317,7 +317,7 @@ godot --headless --editor --path game --quit
 
 Expected: both commands exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add game/player/bubble_inventory.gd game/world/bubble_projectile.gd game/world/bubble_projectile.tscn game/tests/unit/test_world_rules.gd
@@ -342,7 +342,7 @@ git commit -m "feat: add basic and spread bubble shots"
 - Consumes: BubbleProjectile.try_enemy_hit, PlayerBody.apply_stomp_rebound.
 - Produces: health, max_health, hurt_remaining, try_bubble(peer_id, impulse), hurt(enemy_id, peer_id), snapshot_state().
 
-- [ ] **Step 1: Write failing durability tests**
+- [x] **Step 1: Write failing durability tests**
 
 ~~~gdscript
 var beetle = load("res://world/beetle_enemy.tscn").instantiate()
@@ -367,7 +367,7 @@ if not beetle.try_bubble(1, Vector2.ZERO) or defeats != 1:
 
 Add a seed assertion proving one accepted hit defeats.
 
-- [ ] **Step 2: Run in red state**
+- [x] **Step 2: Run in red state**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_world_rules.gd
@@ -375,13 +375,13 @@ godot --headless --path game -s res://tests/unit/test_world_rules.gd
 
 Expected: FAIL because health and hurt cooldown are absent.
 
-- [ ] **Step 3: Implement health, recoil, and visual state**
+- [x] **Step 3: Implement health, recoil, and visual state**
 
 Add HURT state, HURT_COOLDOWN = 0.16, exported max_health = 2, health, hurt_remaining, and prior motion state. Seed scenes set max_health = 1. Accepted hits decrement once, clamp recoil to 180 px/s, emit hurt when alive, and use the existing one-time defeat path at zero. HURT host stepping applies recoil and returns to prior state after cooldown.
 
 snapshot_state returns id, kind, motion state, health, hurt remaining, position, velocity, and direction. restore_state validates all fields before mutation. Visuals use motion plus scale/white flash, not color alone. Add cue names shot, enemy_hit, enemy_defeat, spring, combo, and secret while retaining 12 total voices and four projectile voices.
 
-- [ ] **Step 4: Run combat regressions**
+- [x] **Step 4: Run combat regressions**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_world_rules.gd
@@ -390,7 +390,7 @@ godot --headless --path game -s res://tests/integration/test_sunny_forest.gd
 
 Expected: both commands exit 0 after old one-hit expectations are revised.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add game/world/enemy_actor.gd game/world/beetle_enemy.tscn game/world/seed_enemy.tscn game/visual/enemy_visual.gd game/visual/seed_enemy_visual.gd game/audio/audio_director.gd game/tests/unit/test_world_rules.gd game/tests/integration/test_sunny_forest.gd
@@ -414,7 +414,7 @@ git commit -m "feat: add readable multi-hit combat"
 - Consumes: held action state, ActionResolver, weapon/projectile APIs, enemy events.
 - Produces: TwoPlayerLevel.publish_world_event(kind, payload), TeamCombo preview/commit/refresh/step/snapshot/restore, five-shots-per-second authority cadence.
 
-- [ ] **Step 1: Write failing combo and action-priority tests**
+- [x] **Step 1: Write failing combo and action-priority tests**
 
 ~~~gdscript
 var combo = load("res://core/team_combo.gd").new()
@@ -439,7 +439,7 @@ if combo.multiplier != 1 or combo.remaining != 0.0:
 
 The integration test holds action for one second away from interactables and requires exactly five shot sequences. It presses action at FallenLog and requires one interaction, zero shots until release, then immediate fire after moving away. Spread mode must create exactly three fan members per accepted sequence while consuming one charge.
 
-- [ ] **Step 2: Run both in red state**
+- [x] **Step 2: Run both in red state**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_team_combo.gd
@@ -448,7 +448,7 @@ godot --headless --path game -s res://tests/integration/test_sunny_forest_action
 
 Expected: both fail on missing behavior.
 
-- [ ] **Step 3: Implement publication, cadence, and combo**
+- [x] **Step 3: Implement publication, cadence, and combo**
 
 Extract sequence/RPC publication:
 
@@ -468,7 +468,7 @@ Sunny Forest tracks per-peer fire cooldown, previous action, and interaction cla
 
 TeamCombo uses WINDOW=2.5 and MAX_MULTIPLIER=4. preview_multiplier returns 1 when inactive and min(multiplier+1, 4) while active. commit_scored_event assigns the preview and resets the window. refresh resets only an active window. Extend TeamScore.award(event_id, category, multiplier := 1), clamped 1–4, and add secret value 100. Preview, award, and only then commit when points are nonzero. Teamwork always awards at 1x and refreshes an active combo.
 
-- [ ] **Step 4: Run focused regressions**
+- [x] **Step 4: Run focused regressions**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_team_combo.gd
@@ -479,7 +479,7 @@ godot --headless --path game -s res://tests/integration/test_sunny_forest.gd
 
 Expected: all commands exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add game/core/team_combo.gd game/core/team_score.gd game/levels/two_player_level.gd game/levels/coop_level.gd game/levels/sunny_forest.gd game/tests/unit/test_team_combo.gd game/tests/unit/test_world_rules.gd game/tests/integration/test_sunny_forest_action_combat.gd game/tests/integration/test_sunny_forest.gd
@@ -504,7 +504,7 @@ git commit -m "feat: add held fire and team combos"
 - Consumes: projectile overlaps, player overlaps, publish_world_event.
 - Produces: SecretTrigger.discover(peer_id), discovered(secret_id, peer_id), BreakableBramble.try_projectile(projectile), SunnyForest.discover_secret and discovered_secret_count.
 
-- [ ] **Step 1: Add failing idempotency tests**
+- [x] **Step 1: Add failing idempotency tests**
 
 ~~~gdscript
 var trigger = load("res://world/secret_trigger.gd").new()
@@ -524,7 +524,7 @@ if not restored.restore_state(trigger.snapshot_state()) or restored.discover(1):
 
 Add a bramble test proving only an active basic/spread bubble breaks it and repeat hits do not re-emit broken.
 
-- [ ] **Step 2: Run in red state**
+- [x] **Step 2: Run in red state**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_spring_and_secrets.gd
@@ -532,13 +532,13 @@ godot --headless --path game -s res://tests/unit/test_spring_and_secrets.gd
 
 Expected: FAIL on missing scripts.
 
-- [ ] **Step 3: Implement local components and authority awards**
+- [x] **Step 3: Implement local components and authority awards**
 
 SecretTrigger validates non-empty id and peer 1/2, disables monitoring once, animates scale/fade, and snapshots {secret_id, discovered}. Restore requires the same id and boolean.
 
 BreakableBramble accepts active BubbleProjectile with basic/spread kind, disables collision once, emits broken(bramble_id, owner_peer_id), and plays a bounded leaf burst. Sunny Forest owns discovered ids, publishes secret_discovered, awards secret:id once, advances combo, and plays the cue. The combat bramble reveals its carrot; momentum and co-op triggers begin visible. The co-op secret records two distinct peer ids on its two pads and requires both activations within a one-second window. Add secrets_found and secrets_total to the Sunny Forest completion payload without changing the shared results-screen contract.
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 ~~~bash
 godot --headless --path game -s res://tests/unit/test_spring_and_secrets.gd
@@ -547,7 +547,7 @@ godot --headless --path game -s res://tests/integration/test_sunny_forest_action
 
 Expected: both exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add game/world/secret_trigger.gd game/world/secret_trigger.tscn game/world/breakable_bramble.gd game/world/breakable_bramble.tscn game/art/objects/golden_carrot.svg game/art/objects/cracked_bramble.svg game/levels/sunny_forest.gd game/tests/unit/test_spring_and_secrets.gd game/tests/integration/test_sunny_forest_action_combat.gd
@@ -576,7 +576,7 @@ git commit -m "feat: add optional forest secrets"
 - Consumes: all mechanics from Tasks 1–6.
 - Produces: sections SunlitMeadow, CanopyFork, FallenLogCrossing, BubbleGrove, MagicalTreeRun; safe_route/fast_route/spring_pad/secret groups; HUD render(score, rabbit_hearts, fox_hearts, powered_charges := 0, combo_multiplier := 1, secrets_found := 0, secrets_total := 0).
 
-- [ ] **Step 1: Strengthen scene and HUD tests**
+- [x] **Step 1: Strengthen scene and HUD tests**
 
 Require named sections, nonempty safe/fast route groups, at least three springs, exactly three secrets, four checkpoints, both enemy kinds, both existing co-op gates, and declared budgets 10/24/72.
 
@@ -601,7 +601,7 @@ if hud.get_node("Power").visible or hud.get_node("Combo").visible:
 
 Retain Hebrew RTL assertions and physical LTR touch-control positions.
 
-- [ ] **Step 2: Run in red state**
+- [x] **Step 2: Run in red state**
 
 ~~~bash
 godot --headless --path game -s res://tests/integration/test_sunny_forest.gd
@@ -610,7 +610,7 @@ godot --headless --path game -s res://tests/integration/test_hebrew_ui.gd
 
 Expected: FAIL on missing sections, groups, and HUD nodes.
 
-- [ ] **Step 3: Author the five sections and feedback**
+- [x] **Step 3: Author the five sections and feedback**
 
 Extend level/camera limits to 4800 px. Place checkpoints near x=850, 2050, 3400, 4400.
 
@@ -624,7 +624,7 @@ Use 24–36 directional stars, <=10 enemies, exactly three secrets, and one bram
 
 Replace five ammo dots with one spread icon/count. Hide power at zero and combo at 1x; always show 0/3 secrets in Sunny Forest. Combo tween scales 1.25 to 1.0. Route distinct short cues and clamp camera impulses to shot 1 px, hit 2, defeat 4, spring 5, damage 8. Update platform timelines to traverse production physics; gate-isolation tests may reposition heroes, full-route tests may not.
 
-- [ ] **Step 4: Run all scene/UI/platform regressions**
+- [x] **Step 4: Run all scene/UI/platform regressions**
 
 ~~~bash
 godot --headless --path game -s res://tests/integration/test_sunny_forest.gd
@@ -637,7 +637,7 @@ godot --headless --path game -s res://tests/platform/test_sunny_forest_full.gd -
 
 Expected: all exit 0 and platform result JSON files report pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add game/levels/sunny_forest.tscn game/levels/sunny_forest.gd game/ui/gameplay_hud.gd game/ui/gameplay_hud.tscn game/levels/coop_level.gd game/visual/hero_visual.gd game/audio/audio_director.gd game/assets/audio game/tests/integration/test_sunny_forest.gd game/tests/integration/test_hebrew_ui.gd game/tests/platform/test_sunny_forest_walk.gd game/tests/platform/test_sunny_forest_gates.gd game/tests/platform/test_sunny_forest_full.gd
@@ -664,7 +664,7 @@ git commit -m "feat: rebuild sunny forest around speed routes"
 - Consumes: component snapshot APIs and world event sequence guard.
 - Produces: snapshot keys weapons, combo, secrets, brambles; application protocol version 2.
 
-- [ ] **Step 1: Write a failing rich-state round trip**
+- [x] **Step 1: Write a failing rich-state round trip**
 
 Set up ten spread charges, fire one fan, hurt a beetle once, score a star, discover one secret, and capture. Require keys:
 
@@ -686,7 +686,7 @@ if level.active_bubble_count() != 3 or level.discovered_secret_count() != 1:
 
 Corrupt enemy health, weapon kind, combo multiplier, duplicate secrets, and >24 projectiles separately. Each invalid snapshot must reject without partial mutation.
 
-- [ ] **Step 2: Run in red state**
+- [x] **Step 2: Run in red state**
 
 ~~~bash
 godot --headless --path game -s res://tests/integration/test_sunny_forest_reconnect_rich_state.gd
@@ -694,7 +694,7 @@ godot --headless --path game -s res://tests/integration/test_sunny_forest_reconn
 
 Expected: FAIL on missing rich keys.
 
-- [ ] **Step 3: Implement validate-then-commit restore and bump protocol**
+- [x] **Step 3: Implement validate-then-commit restore and bump protocol**
 
 Validate all sections into temporary values before mutating live state. Reject unknown kinds, health outside bounds, combo outside 1–4, timer outside 0–2.5, duplicate secrets, wrong bramble ids, or >24 projectiles. Restore never emits score/discovery signals.
 
@@ -706,7 +706,7 @@ python3 scripts/sync_release_metadata.py --write
 
 Update test_project_smoke expectations. Keep save_schema_version at 1 because session state is not persisted.
 
-- [ ] **Step 4: Run reconnect and compatibility checks**
+- [x] **Step 4: Run reconnect and compatibility checks**
 
 ~~~bash
 godot --headless --path game -s res://tests/integration/test_sunny_forest_reconnect_rich_state.gd
@@ -719,7 +719,7 @@ bash scripts/run_reconnect_pair.sh
 
 Expected: all exit 0 and pair logs report compatible protocol-2 peers.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ~~~bash
 git add game/levels/sunny_forest.gd game/world/enemy_actor.gd game/world/bubble_projectile.gd game/core/team_combo.gd game/player/bubble_inventory.gd game/core/build_info.gd release/metadata.json game/tests/unit/test_project_smoke.gd game/tests/integration/test_sunny_forest.gd game/tests/integration/test_sunny_forest_reconnect_rich_state.gd
@@ -741,7 +741,7 @@ git commit -m "feat: restore rich forest combat state"
 - Consumes: final Sunny Forest and input-timeline harness.
 - Produces: captures canopy_speed, spread_combat, secret_found, tree_finish; automated budget proof; explicit unpassed device/usability gate.
 
-- [ ] **Step 1: Write failing platform assertions**
+- [x] **Step 1: Write failing platform assertions**
 
 Create a timeline that drives both heroes through the opening, holds fire at a beetle, takes Riki over the upper springs, collects the momentum secret, acquires spread fire, and reunites at finish. Capture the four exact names above. Add assertion kinds:
 
@@ -759,7 +759,7 @@ Create a timeline that drives both heroes through the opening, holds fire at a b
 
 End assertions: score_gt 0, active_projectiles_lte 24, secrets_eq 1, combo_lte 4, finished true, no_errors. Extend performance_check to instantiate Sunny Forest after Cloud Factory and enforce declared budgets <=12/24/80.
 
-- [ ] **Step 2: Run in red state**
+- [x] **Step 2: Run in red state**
 
 ~~~bash
 godot --headless --path game -s res://tests/platform/test_sunny_forest_momentum_combat.gd -- --test=sunny_forest_momentum_combat --level=sunny_forest
@@ -768,7 +768,7 @@ godot --headless --path game -s res://tests/device/performance_check.gd
 
 Expected: platform FAIL until assertion support/frame counts are correct; budget FAIL if scene budgets are absent.
 
-- [ ] **Step 3: Finish deterministic captures and document human gates**
+- [x] **Step 3: Finish deterministic captures and document human gates**
 
 Tune only timeline input durations/assertion frames; do not teleport in this full-route test. With DISPLAY, run and visually inspect baselines:
 
@@ -778,7 +778,7 @@ python3 scripts/run_visual_tests.py --update-baselines
 
 Add unchecked release-checklist items for: two children/operators completing safe route; one completing fast route; both finding one secret without instruction; both understanding held fire; both tablets maintaining >=30 FPS through Canopy Fork and Bubble Grove. Never mark human/hardware gates passed from automation.
 
-- [ ] **Step 4: Run the complete verification ladder**
+- [x] **Step 4: Run the complete verification ladder**
 
 ~~~bash
 godot --headless --path game -s res://tests/platform/test_sunny_forest_momentum_combat.gd -- --test=sunny_forest_momentum_combat --level=sunny_forest
@@ -791,7 +791,7 @@ bash scripts/build_android.sh
 
 Expected: all exit 0; build emits APK, sha256, and idsig; permission audit reports exactly four allowed permissions. If toolchain pieces are missing, report the exact error and do not claim that gate.
 
-- [ ] **Step 5: Commit and stop at hardware boundary**
+- [x] **Step 5: Commit and stop at hardware boundary**
 
 ~~~bash
 git add game/tests/platform/test_sunny_forest_momentum_combat.gd game/tests/platform/test_runner.gd game/tests/device/performance_check.gd test-output/baselines/sunny_forest_momentum_combat docs/release-checklist.md game/assets/ATTRIBUTION.md
@@ -802,9 +802,9 @@ Do not run device_smoke.sh without two resolved SM-T220 serials and a human for 
 
 ## Final Review Checklist
 
-- [ ] Every design acceptance criterion maps to Tasks 1–9.
-- [ ] git diff --check reports no whitespace errors.
-- [ ] git status --short shows no accidentally staged operator evidence or game/test-output.
-- [ ] Full game, LAN, reconnect, performance, permission, deploy, and build commands have real recorded exit status.
-- [ ] New original assets follow game/assets/ATTRIBUTION.md conventions.
-- [ ] Physical-tablet FPS and child usability remain unchecked until humans perform them.
+- [x] Every design acceptance criterion maps to Tasks 1–9.
+- [x] git diff --check reports no whitespace errors.
+- [x] git status --short shows no accidentally staged operator evidence or game/test-output.
+- [x] Full game, LAN, reconnect, performance, permission, deploy, and build commands have real recorded exit status.
+- [x] New original assets follow game/assets/ATTRIBUTION.md conventions.
+- [x] Physical-tablet FPS and child usability remain unchecked until humans perform them.
