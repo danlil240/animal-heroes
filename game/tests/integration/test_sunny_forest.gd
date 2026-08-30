@@ -47,12 +47,31 @@ func _run() -> void:
 	if not enemy_kinds.has("beetle") or not enemy_kinds.has("seed"):
 		_fail("sunny forest must contain beetle and hopping-seed enemies")
 		return
-	for section_name in ["SunlitMeadow", "FallenLogCrossing", "BubbleGrove", "MagicalTreeFinish"]:
+	for section_name in ["SunlitMeadow", "CanopyFork", "FallenLogCrossing", "BubbleGrove", "MagicalTreeRun"]:
 		if level.get_node_or_null(section_name) == null:
 			_fail("sunny forest must expose section %s" % section_name)
 			return
+	var springs: Array = level.get_tree().get_nodes_in_group("spring_pad")
+	if springs.size() < 3:
+		_fail("sunny forest must have at least three springs, got %d" % springs.size())
+		return
+	var secrets: Array = level.get_tree().get_nodes_in_group("secret")
+	if secrets.size() != 3:
+		_fail("sunny forest must have exactly three secrets, got %d" % secrets.size())
+		return
+	if level.get_tree().get_nodes_in_group("safe_route").size() < 1:
+		_fail("sunny forest must declare a nonempty safe route group")
+		return
+	if level.get_tree().get_nodes_in_group("fast_route").size() < 1:
+		_fail("sunny forest must declare a nonempty fast route group")
+		return
+	if level.get_tree().get_nodes_in_group("bramble").size() < 1:
+		_fail("sunny forest must include at least one breakable bramble")
+		return
 	if level.get_node_or_null("HUD/GameplayHud") == null:
 		_fail("sunny forest must include the shared gameplay HUD")
+		return
+	if not _test_hud_renders_power_combo_and_secrets():
 		return
 	if not _test_platforms_are_reachable(level):
 		return
@@ -73,6 +92,34 @@ func _run() -> void:
 	level.queue_free()
 	await process_frame
 	quit(0)
+
+
+## The HUD must render spread count, active combo, and secret progress, and
+## hide power and combo when inactive.
+func _test_hud_renders_power_combo_and_secrets() -> bool:
+	var hud_scene = load("res://ui/gameplay_hud.tscn")
+	var hud = hud_scene.instantiate()
+	root.add_child(hud)
+	hud.render(240, 2, 3, 7, 3, 2, 3)
+	if hud.get_node("Power/Count").text != "7":
+		_fail("spread count must render")
+		hud.queue_free()
+		return false
+	if hud.get_node("Combo").text != "×3" or not hud.get_node("Combo").visible:
+		_fail("active combo must render")
+		hud.queue_free()
+		return false
+	if hud.get_node("Secrets").text != "2/3":
+		_fail("secret progress must render")
+		hud.queue_free()
+		return false
+	hud.render(240, 2, 3, 0, 1, 0, 3)
+	if hud.get_node("Power").visible or hud.get_node("Combo").visible:
+		_fail("inactive power and combo must hide")
+		hud.queue_free()
+		return false
+	hud.queue_free()
+	return true
 
 
 ## Both heroes must be able to jump from the ground onto the lowest platform

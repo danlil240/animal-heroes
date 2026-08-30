@@ -152,6 +152,22 @@ func _completion_payload_extras() -> Dictionary:
 	}
 
 
+func _render_gameplay_hud() -> void:
+	var hud = get_node_or_null("HUD/GameplayHud")
+	if hud == null or not hud.has_method("render"):
+		return
+	var local_peer_id := int(_local_hero().get("peer_id"))
+	hud.render(
+		team_score.total,
+		rabbit.hearts,
+		fox.hearts,
+		bubble_ammo.remaining(local_peer_id),
+		team_combo.multiplier,
+		discovered_secret_count(),
+		secrets_total(),
+	)
+
+
 func grant_bubbles(peer_id: int) -> int:
 	var amount: int = bubble_ammo.grant(peer_id)
 	_render_gameplay_hud()
@@ -213,7 +229,7 @@ func enter_finish(peer_id: int) -> bool:
 		var visual = hero.get_node_or_null("Visual")
 		if visual != null and visual.has_method("play_celebration"):
 			visual.play_celebration()
-	var tree_visual = get_node_or_null("MagicalTreeFinish/MagicalTree/Visual")
+	var tree_visual = get_node_or_null("MagicalTreeRun/MagicalTree/Visual")
 	if tree_visual != null and tree_visual.has_method("play_celebration"):
 		tree_visual.play_celebration()
 	coop_mode.complete_level()

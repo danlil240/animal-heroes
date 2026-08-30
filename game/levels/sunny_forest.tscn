@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=3]
+[gd_scene load_steps=41 format=3]
 
 [ext_resource type="Script" path="res://levels/sunny_forest.gd" id="1_forest"]
 [ext_resource type="Script" path="res://player/player_body.gd" id="2_player"]
@@ -26,9 +26,12 @@
 [ext_resource type="Texture2D" path="res://art/objects/pressure_flower.svg" id="24_pressure"]
 [ext_resource type="Texture2D" path="res://art/objects/bubble_flower.svg" id="25_bubble_flower"]
 [ext_resource type="PackedScene" path="res://visual/magical_tree_visual.tscn" id="26_magical_tree"]
+[ext_resource type="PackedScene" path="res://world/spring_pad.tscn" id="27_spring"]
+[ext_resource type="PackedScene" path="res://world/secret_trigger.tscn" id="28_secret"]
+[ext_resource type="PackedScene" path="res://world/breakable_bramble.tscn" id="29_bramble"]
 
 [sub_resource type="RectangleShape2D" id="GroundShape"]
-size = Vector2(3200, 80)
+size = Vector2(4800, 80)
 
 [sub_resource type="RectangleShape2D" id="PlatformShape"]
 size = Vector2(210, 20)
@@ -37,7 +40,7 @@ size = Vector2(210, 20)
 size = Vector2(140, 20)
 
 [sub_resource type="RectangleShape2D" id="FallShape"]
-size = Vector2(3400, 120)
+size = Vector2(5000, 120)
 
 [sub_resource type="RectangleShape2D" id="PlayerShape"]
 size = Vector2(32, 48)
@@ -76,6 +79,54 @@ patrol_range = 90.0
 [node name="SeedMeadow1" parent="SunlitMeadow" groups=["enemy"] instance=ExtResource("20_seed")]
 position = Vector2(930, 696)
 enemy_id = "seed-meadow-1"
+
+[node name="SpringMeadow" parent="SunlitMeadow" groups=["spring_pad"] instance=ExtResource("27_spring")]
+position = Vector2(900, 570)
+launch_velocity = Vector2(0, -760)
+
+[node name="CanopyFork" type="Node2D" parent="."]
+
+[node name="CanopyPlatform1" type="StaticBody2D" parent="CanopyFork" groups=["forest_platform", "fast_route"]]
+position = Vector2(1100, 520)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CanopyFork/CanopyPlatform1"]
+shape = SubResource("PlatformShape")
+
+[node name="Visual" parent="CanopyFork/CanopyPlatform1" instance=ExtResource("11_platform_visual")]
+
+[node name="CanopyPlatform2" type="StaticBody2D" parent="CanopyFork" groups=["forest_platform", "fast_route"]]
+position = Vector2(1350, 440)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CanopyFork/CanopyPlatform2"]
+shape = SubResource("PlatformShape")
+
+[node name="Visual" parent="CanopyFork/CanopyPlatform2" instance=ExtResource("11_platform_visual")]
+
+[node name="CanopyPlatform3" type="StaticBody2D" parent="CanopyFork" groups=["forest_platform", "fast_route"]]
+position = Vector2(1600, 380)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CanopyFork/CanopyPlatform3"]
+shape = SubResource("SmallPlatformShape")
+
+[node name="Visual" parent="CanopyFork/CanopyPlatform3" instance=ExtResource("11_platform_visual")]
+
+[node name="SpringCanopy1" parent="CanopyFork" groups=["spring_pad"] instance=ExtResource("27_spring")]
+position = Vector2(1100, 510)
+launch_velocity = Vector2(240, -720)
+
+[node name="SpringCanopy2" parent="CanopyFork" groups=["spring_pad"] instance=ExtResource("27_spring")]
+position = Vector2(1350, 430)
+launch_velocity = Vector2(240, -760)
+
+[node name="MomentumSecret" parent="CanopyFork" groups=["secret"] instance=ExtResource("28_secret")]
+position = Vector2(1600, 320)
+secret_id = "momentum-carrot"
+
+[node name="SafeRouteMarker" type="Marker2D" parent="CanopyFork" groups=["safe_route"]]
+position = Vector2(1050, 656)
+
+[node name="FastRouteMarker" type="Marker2D" parent="CanopyFork" groups=["fast_route"]]
+position = Vector2(1600, 380)
 
 [node name="FallenLogCrossing" type="Node2D" parent="."]
 
@@ -128,6 +179,14 @@ color = Color(0.22, 0.54, 0.22, 1)
 position = Vector2(1260, 696)
 enemy_id = "beetle-crossing-1"
 patrol_range = 70.0
+
+[node name="GroveBramble" parent="FallenLogCrossing" groups=["bramble"] instance=ExtResource("29_bramble")]
+position = Vector2(1700, 656)
+bramble_id = "grove-bramble"
+
+[node name="CombatSecret" parent="FallenLogCrossing" groups=["secret"] instance=ExtResource("28_secret")]
+position = Vector2(1700, 560)
+secret_id = "combat-carrot"
 
 [node name="BubbleGrove" type="Node2D" parent="."]
 
@@ -196,10 +255,15 @@ color = Color(0.25, 0.7, 0.66, 0.92)
 position = Vector2(2380, 696)
 enemy_id = "seed-grove-1"
 
-[node name="MagicalTreeFinish" type="Node2D" parent="."]
+[node name="CoopSecret" parent="BubbleGrove" groups=["secret"] instance=ExtResource("28_secret")]
+position = Vector2(2300, 560)
+secret_id = "coop-carrot"
+coop_activation = true
 
-[node name="MagicalTree" type="Area2D" parent="MagicalTreeFinish" groups=["sunny_interactable"]]
-position = Vector2(3050, 656)
+[node name="MagicalTreeRun" type="Node2D" parent="."]
+
+[node name="MagicalTree" type="Area2D" parent="MagicalTreeRun" groups=["sunny_interactable"]]
+position = Vector2(4600, 656)
 collision_layer = 0
 collision_mask = 0
 script = ExtResource("21_interactable")
@@ -207,10 +271,17 @@ interactable_id = "magical-tree"
 interaction_kind = "finish"
 interaction_priority = 110
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="MagicalTreeFinish/MagicalTree"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MagicalTreeRun/MagicalTree"]
 shape = SubResource("ExitShape")
 
-[node name="Visual" parent="MagicalTreeFinish/MagicalTree" instance=ExtResource("26_magical_tree")]
+[node name="Visual" parent="MagicalTreeRun/MagicalTree" instance=ExtResource("26_magical_tree")]
+
+[node name="SpringFinish" parent="MagicalTreeRun" groups=["spring_pad"] instance=ExtResource("27_spring")]
+position = Vector2(4200, 690)
+launch_velocity = Vector2(200, -720)
+
+[node name="SafeRouteFinish" type="Marker2D" parent="MagicalTreeRun" groups=["safe_route"]]
+position = Vector2(4100, 656)
 
 [node name="Bubbles" type="Node2D" parent="."]
 
@@ -221,7 +292,7 @@ position = Vector2(80, 656)
 position = Vector2(140, 656)
 
 [node name="Ground" type="StaticBody2D" parent="."]
-position = Vector2(1600, 720)
+position = Vector2(2400, 720)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
 shape = SubResource("GroundShape")
@@ -300,6 +371,46 @@ position = Vector2(2700, 500)
 shape = SubResource("PlatformShape")
 
 [node name="Visual" parent="Platform9" instance=ExtResource("11_platform_visual")]
+
+[node name="Platform10" type="StaticBody2D" parent="." groups=["forest_platform", "safe_route"]]
+position = Vector2(3000, 580)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform10"]
+shape = SubResource("PlatformShape")
+
+[node name="Visual" parent="Platform10" instance=ExtResource("11_platform_visual")]
+
+[node name="Platform11" type="StaticBody2D" parent="." groups=["forest_platform", "safe_route"]]
+position = Vector2(3300, 500)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform11"]
+shape = SubResource("PlatformShape")
+
+[node name="Visual" parent="Platform11" instance=ExtResource("11_platform_visual")]
+
+[node name="Platform12" type="StaticBody2D" parent="." groups=["forest_platform", "safe_route"]]
+position = Vector2(3600, 580)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform12"]
+shape = SubResource("PlatformShape")
+
+[node name="Visual" parent="Platform12" instance=ExtResource("11_platform_visual")]
+
+[node name="Platform13" type="StaticBody2D" parent="." groups=["forest_platform", "safe_route"]]
+position = Vector2(3900, 500)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform13"]
+shape = SubResource("PlatformShape")
+
+[node name="Visual" parent="Platform13" instance=ExtResource("11_platform_visual")]
+
+[node name="Platform14" type="StaticBody2D" parent="." groups=["forest_platform", "safe_route"]]
+position = Vector2(4200, 580)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform14"]
+shape = SubResource("PlatformShape")
+
+[node name="Visual" parent="Platform14" instance=ExtResource("11_platform_visual")]
 
 [node name="Checkpoint1" type="Area2D" parent="." groups=["checkpoint"]]
 position = Vector2(400, 656)
@@ -450,8 +561,44 @@ shape = SubResource("CollectibleShape")
 [node name="Visual" parent="Collectibles/Star12" instance=ExtResource("12_star_visual")]
 phase_offset = 6.6
 
+[node name="Star13" type="Area2D" parent="Collectibles" groups=["collectible"]]
+position = Vector2(3500, 540)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collectibles/Star13"]
+shape = SubResource("CollectibleShape")
+
+[node name="Visual" parent="Collectibles/Star13" instance=ExtResource("12_star_visual")]
+phase_offset = 7.2
+
+[node name="Star14" type="Area2D" parent="Collectibles" groups=["collectible"]]
+position = Vector2(3800, 460)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collectibles/Star14"]
+shape = SubResource("CollectibleShape")
+
+[node name="Visual" parent="Collectibles/Star14" instance=ExtResource("12_star_visual")]
+phase_offset = 7.8
+
+[node name="Star15" type="Area2D" parent="Collectibles" groups=["collectible"]]
+position = Vector2(4100, 540)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collectibles/Star15"]
+shape = SubResource("CollectibleShape")
+
+[node name="Visual" parent="Collectibles/Star15" instance=ExtResource("12_star_visual")]
+phase_offset = 8.4
+
+[node name="Star16" type="Area2D" parent="Collectibles" groups=["collectible"]]
+position = Vector2(4400, 656)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collectibles/Star16"]
+shape = SubResource("CollectibleShape")
+
+[node name="Visual" parent="Collectibles/Star16" instance=ExtResource("12_star_visual")]
+phase_offset = 9.0
+
 [node name="Exit" type="Area2D" parent="."]
-position = Vector2(3050, 656)
+position = Vector2(4600, 656)
 script = ExtResource("10_exit")
 required_players = 2
 
@@ -462,7 +609,7 @@ shape = SubResource("ExitShape")
 visible = false
 
 [node name="FallRespawn" type="Area2D" parent="."]
-position = Vector2(1600, 930)
+position = Vector2(2400, 930)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FallRespawn"]
 shape = SubResource("FallShape")
@@ -482,7 +629,7 @@ kind = "rabbit"
 position = Vector2(0, 0)
 limit_left = 0
 limit_top = 0
-limit_right = 3200
+limit_right = 4800
 limit_bottom = 800
 
 [node name="Fox" type="CharacterBody2D" parent="."]
@@ -500,7 +647,7 @@ kind = "fox"
 position = Vector2(0, 0)
 limit_left = 0
 limit_top = 0
-limit_right = 3200
+limit_right = 4800
 limit_bottom = 800
 
 [node name="HUD" type="CanvasLayer" parent="."]

@@ -2,11 +2,11 @@ extends "res://tests/platform/test_runner.gd"
 
 
 func _build_timeline() -> InputTimeline:
-	var t := InputTimeline.new(480)
+	var t := InputTimeline.new(640)
 	# Fox (peer 2): push FallenLog, pick up bubble power-up, activate RightFlower,
-	# fire a bubble, then continue to the MagicalTree.
-	t.add(2, 0, 390, {"axis": 1.0})
-	t.add(2, 391, 480, {"axis": 0.0})
+	# fire a bubble, then continue to the MagicalTree at x=4600.
+	t.add(2, 0, 550, {"axis": 1.0})
+	t.add(2, 551, 640, {"axis": 0.0})
 	t.add(2, 117, 117, {"action": true})
 	t.add(2, 119, 119, {"action": true})
 	t.add(2, 121, 121, {"action": true})
@@ -32,8 +32,8 @@ func _build_timeline() -> InputTimeline:
 	# walk right to activate LeftFlower, then continue to the MagicalTree.
 	t.add(1, 0, 150, {"axis": 1.0})
 	t.add(1, 151, 155, {"axis": 0.0})
-	t.add(1, 156, 370, {"axis": 1.0})
-	t.add(1, 371, 480, {"axis": 0.0})
+	t.add(1, 156, 550, {"axis": 1.0})
+	t.add(1, 551, 640, {"axis": 0.0})
 	t.add(1, 5, 10, {"jump": true})
 	t.add(1, 45, 50, {"jump": true})
 	t.add(1, 115, 120, {"jump": true})
@@ -48,7 +48,7 @@ func _build_timeline() -> InputTimeline:
 	t.capture(240, "bubble_pickup")
 	t.capture(270, "bubble_grove_gate")
 	t.capture(300, "bubble_fired")
-	t.capture(400, "level_finish")
+	t.capture(560, "level_finish")
 	t.assert_end("score_gt", [0])
 	t.assert_end("finished")
 	t.assert_end("no_errors")
