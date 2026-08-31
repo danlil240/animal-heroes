@@ -13,7 +13,7 @@ supervised usability result.
 | 2 | Stable 30 FPS in worst-case scene | `performance_check.gd` + device smoke | PENDING DEVICE CHECK |
 | 3 | Automatic UDP discovery and ENet connection | `test_discovery.gd`, `test_session_pair.gd` | PASS (automated) |
 | 4 | Pause, reconnect, and checkpoint recovery | `test_reconnect_pair.gd`, `test_reconnect_state.gd` | PASS (automated) |
-| 5 | Complete cooperative campaign (3 levels + boss) | `test_sunny_forest.gd`, `test_crystal_caves.gd`, `test_cloud_factory.gd`, `test_boss_phases.gd` | PASS (automated) |
+| 5 | Complete cooperative campaign (3 levels + boss) | `test_sunny_forest.gd`, `test_crystal_caves.gd`, `test_cloud_factory.gd`, `test_boss_phases.gd`, `test_sunny_forest_momentum_combat.gd` | PASS (automated, headless) |
 | 6 | Three competitive modes with rematch | `test_star_race.gd`, `test_treasure_dash.gd`, `test_bubble_bounce.gd`, `test_results_flow.gd` | PASS (automated) |
 | 7 | Hebrew RTL UI with touch controls | `test_hebrew_ui.gd` | PASS (automated) |
 | 8 | Original child-friendly art, no copyrighted assets | Visual target acceptance record | PASS (desktop) |
@@ -53,3 +53,17 @@ All headless tests must pass. Current status: PASS.
 10. [ ] Install release on both tablets
 11. [ ] Complete one cooperative checkpoint and one competitive match
 12. [ ] Tag release: `git tag -a v1.0.0-rc1 -m "Animal Heroes 1.0.0 release candidate"`
+
+## Sunny Forest Human/Hardware Gates
+
+The following Sunny Forest acceptance gates require physical tablets and/or
+supervised child sessions. They are intentionally recorded as NOT PASSED until
+performed and evidenced; do not mark them passed without real evidence.
+
+| # | Gate | Status |
+| --- | --- | --- |
+| SF-1 | Two children/operators complete the safe route together | NOT PASSED (requires supervised session) |
+| SF-2 | One child/operator completes the fast route | NOT PASSED (requires supervised session) |
+| SF-3 | Both find one secret without instruction | NOT PASSED (requires supervised session) |
+| SF-4 | Both understand held fire without instruction | NOT PASSED (requires supervised session) |
+| SF-5 | Both tablets maintain at least 30 FPS through Canopy Fork and Bubble Grove | NOT PASSED (requires SM-T220 tablets) |

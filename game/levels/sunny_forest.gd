@@ -27,6 +27,9 @@ var _previous_action_held: Dictionary = {1: false, 2: false}
 var _fire_remaining: Dictionary = {1: 0.0, 2: 0.0}
 var _interaction_claims: Dictionary = {}
 var _pool_exhaustion_reported: bool = false
+var _discovered_secrets: Dictionary = {}
+var _secret_triggers: Dictionary = {}
+var _brambles: Dictionary = {}
 
 
 func _setup_coop_level() -> void:
@@ -42,6 +45,17 @@ func _setup_coop_level() -> void:
 			enemy.defeated.connect(_on_enemy_defeated)
 		if enemy.has_signal("player_hit"):
 			enemy.player_hit.connect(_on_enemy_player_hit)
+	for trigger in get_tree().get_nodes_in_group("secret"):
+		if trigger.has_signal("discovered") and trigger.has_method("snapshot_state"):
+			var sid := String(trigger.get("secret_id"))
+			if not sid.is_empty():
+				_secret_triggers[sid] = trigger
+				trigger.discovered.connect(_on_secret_discovered)
+	for bramble in get_tree().get_nodes_in_group("bramble"):
+		if bramble.has_signal("broken") and bramble.has_method("snapshot_state"):
+			var bid := String(bramble.get("bramble_id"))
+			if not bid.is_empty():
+				_brambles[bid] = bramble
 
 
 func _step_level(delta: float) -> void:
@@ -106,6 +120,56 @@ func gate_is_open(gate_id: String) -> bool:
 	return _gates.has(gate_id) and _gates[gate_id].is_complete()
 
 
+func discover_secret(secret_id: String, peer_id: int, score_payload: Dictionary = {}) -> bool:
+	if secret_id.is_empty() or (peer_id != 1 and peer_id != 2):
+		return false
+	if _discovered_secrets.has(secret_id):
+		return false
+	_discovered_secrets[secret_id] = true
+	if _secret_triggers.has(secret_id) and _secret_triggers[secret_id].has_method("discover"):
+		_secret_triggers[secret_id].discover(peer_id)
+	var event_id := "secret:%s" % secret_id
+	var points: int = _award_authoritative_score(event_id, "secret", score_payload) if not score_payload.is_empty() else _award_combo_score(event_id, "secret")
+	if points <= 0:
+		_discovered_secrets.erase(secret_id)
+		return false
+	AudioDirector.play_gameplay_cue("secret", peer_id)
+	_show_score_gain(points, Vector2.ZERO)
+	_render_gameplay_hud()
+	return true
+
+
+func discovered_secret_count() -> int:
+	return _discovered_secrets.size()
+
+
+func secrets_total() -> int:
+	return _secret_triggers.size()
+
+
+func _completion_payload_extras() -> Dictionary:
+	return {
+		"secrets_found": discovered_secret_count(),
+		"secrets_total": secrets_total(),
+	}
+
+
+func _render_gameplay_hud() -> void:
+	var hud = get_node_or_null("HUD/GameplayHud")
+	if hud == null or not hud.has_method("render"):
+		return
+	var local_peer_id := int(_local_hero().get("peer_id"))
+	hud.render(
+		team_score.total,
+		rabbit.hearts,
+		fox.hearts,
+		bubble_ammo.remaining(local_peer_id),
+		team_combo.multiplier,
+		discovered_secret_count(),
+		secrets_total(),
+	)
+
+
 func grant_bubbles(peer_id: int) -> int:
 	var amount: int = bubble_ammo.grant(peer_id)
 	_render_gameplay_hud()
@@ -167,7 +231,7 @@ func enter_finish(peer_id: int) -> bool:
 		var visual = hero.get_node_or_null("Visual")
 		if visual != null and visual.has_method("play_celebration"):
 			visual.play_celebration()
-	var tree_visual = get_node_or_null("MagicalTreeFinish/MagicalTree/Visual")
+	var tree_visual = get_node_or_null("MagicalTreeRun/MagicalTree/Visual")
 	if tree_visual != null and tree_visual.has_method("play_celebration"):
 		tree_visual.play_celebration()
 	coop_mode.complete_level()
@@ -203,6 +267,16 @@ func world_state_snapshot() -> Dictionary:
 				"fan_index": int(bubble.fan_index),
 				"remaining": bubble.lifetime_remaining(),
 			})
+	var secrets: Array[Dictionary] = []
+	for sid in _secret_triggers:
+		var trigger = _secret_triggers[sid]
+		if trigger.has_method("snapshot_state"):
+			secrets.append(trigger.snapshot_state())
+	var brambles: Array[Dictionary] = []
+	for bid in _brambles:
+		var bramble = _brambles[bid]
+		if bramble.has_method("snapshot_state"):
+			brambles.append(bramble.snapshot_state())
 	return {
 		"score": team_score.total,
 		"collected_ids": team_score.snapshot()["awarded_ids"],
@@ -213,17 +287,24 @@ func world_state_snapshot() -> Dictionary:
 		"gates": gates,
 		"ammo": bubble_ammo.snapshot(),
 		"projectiles": projectiles,
+		"secrets": secrets,
+		"brambles": brambles,
 		"event_sequence": _last_applied_world_event_sequence,
 	}
 
 
 ## Replaces shared world state from a prior `world_state_snapshot()`. Rejects
-## snapshots taken after the level already finished. Restores score, ammo,
-## gates, enemies, hero positions, checkpoint, event sequence, and in-flight
-## projectiles exactly.
+## snapshots taken after the level already finished. Validates the entire
+## snapshot before mutating any state, so a rejected snapshot leaves the world
+## unchanged. Restores score, ammo, gates, enemies, hero positions, checkpoint,
+## event sequence, in-flight projectiles, discovered secrets, and bramble state.
 func restore_world_state(snapshot: Dictionary) -> bool:
 	if is_finished():
 		return false
+	# Validate every component's shape and references before mutating anything.
+	if not _validate_snapshot_shape(snapshot):
+		return false
+	# All validation passed; apply mutations.
 	var score_data := {"total": int(snapshot.get("score", -1)), "awarded_ids": snapshot.get("collected_ids", [])}
 	if not team_score.restore(score_data):
 		return false
@@ -231,27 +312,79 @@ func restore_world_state(snapshot: Dictionary) -> bool:
 		return false
 	if not bubble_ammo.restore(snapshot.get("ammo", {})):
 		return false
-	var gates_data: Variant = snapshot.get("gates", null)
-	if not gates_data is Dictionary:
-		return false
+	var gates_data: Dictionary = snapshot.get("gates", {})
 	for gate_id in gates_data:
-		if not _gates.has(gate_id) or not _gates[gate_id].restore(gates_data[gate_id]):
-			return false
+		_gates[gate_id].restore(gates_data[gate_id])
 	if not _restore_enemy_state(snapshot.get("enemies", [])):
 		return false
-	var heroes_data: Variant = snapshot.get("heroes", null)
-	if heroes_data is Dictionary:
-		if heroes_data.has(1):
-			rabbit.global_position = Vector2(heroes_data[1])
-		if heroes_data.has(2):
-			fox.global_position = Vector2(heroes_data[2])
+	var heroes_data: Dictionary = snapshot.get("heroes", {})
+	if heroes_data.has(1):
+		rabbit.global_position = Vector2(heroes_data[1])
+	if heroes_data.has(2):
+		fox.global_position = Vector2(heroes_data[2])
 	coop_mode.current_checkpoint_id = String(snapshot.get("checkpoint_id", ""))
 	_last_applied_world_event_sequence = int(snapshot.get("event_sequence", _last_applied_world_event_sequence))
 	if not _restore_projectiles(snapshot.get("projectiles", [])):
 		return false
+	_apply_secrets_restore(snapshot.get("secrets", []))
+	_apply_brambles_restore(snapshot.get("brambles", []))
 	_reset_all_action_authority()
 	_render_gameplay_hud()
 	return true
+
+
+## Shape-only validation that does not mutate any live state. Returns false if
+## any required key is missing, mistyped, or references an unknown entity.
+func _validate_snapshot_shape(snapshot: Dictionary) -> bool:
+	if not snapshot.has_all(["score", "collected_ids", "combo", "checkpoint_id", "heroes", "enemies", "gates", "ammo", "projectiles", "secrets", "brambles", "event_sequence"]):
+		return false
+	if typeof(snapshot["score"]) != TYPE_INT or typeof(snapshot["collected_ids"]) != TYPE_ARRAY:
+		return false
+	if typeof(snapshot["combo"]) != TYPE_DICTIONARY or typeof(snapshot["checkpoint_id"]) != TYPE_STRING:
+		return false
+	if typeof(snapshot["heroes"]) != TYPE_DICTIONARY or typeof(snapshot["enemies"]) != TYPE_ARRAY:
+		return false
+	if typeof(snapshot["gates"]) != TYPE_DICTIONARY or typeof(snapshot["ammo"]) != TYPE_DICTIONARY:
+		return false
+	if typeof(snapshot["projectiles"]) != TYPE_ARRAY or typeof(snapshot["secrets"]) != TYPE_ARRAY:
+		return false
+	if typeof(snapshot["brambles"]) != TYPE_ARRAY or typeof(snapshot["event_sequence"]) != TYPE_INT:
+		return false
+	var gates_data: Dictionary = snapshot["gates"]
+	for gate_id in gates_data:
+		if not _gates.has(gate_id):
+			return false
+	for entry in snapshot["enemies"]:
+		if not entry is Dictionary or not entry.has("enemy_id"):
+			return false
+	for entry in snapshot["secrets"]:
+		if not entry is Dictionary or not entry.has("secret_id"):
+			return false
+		if not _secret_triggers.has(String(entry["secret_id"])):
+			return false
+	for entry in snapshot["brambles"]:
+		if not entry is Dictionary or not entry.has("bramble_id"):
+			return false
+		if not _brambles.has(String(entry["bramble_id"])):
+			return false
+	return true
+
+
+func _apply_secrets_restore(secrets_data: Array) -> void:
+	_discovered_secrets.clear()
+	for entry in secrets_data:
+		var sid := String(entry.get("secret_id", ""))
+		if _secret_triggers.has(sid):
+			_secret_triggers[sid].restore_state(entry)
+			if bool(_secret_triggers[sid].is_discovered()):
+				_discovered_secrets[sid] = true
+
+
+func _apply_brambles_restore(brambles_data: Array) -> void:
+	for entry in brambles_data:
+		var bid := String(entry.get("bramble_id", ""))
+		if _brambles.has(bid):
+			_brambles[bid].restore_state(entry)
 
 
 func _restore_enemy_state(enemies_data: Variant) -> bool:
@@ -331,7 +464,7 @@ func _validate_world_action(peer_id: int, action_id: String, target_id: String, 
 
 func _prepare_world_event(kind: String, payload: Dictionary) -> Dictionary:
 	match kind:
-		"collect", "enemy_defeat":
+		"collect", "enemy_defeat", "secret_discovered":
 			return _with_authoritative_combo_score(payload)
 		"gate_part":
 			return _with_authoritative_combo_score(payload, true)
@@ -356,6 +489,8 @@ func _apply_world_event_accepted(_sequence: int, kind: String, payload: Dictiona
 			return fire_bubble(int(payload.get("peer_id", 0)), Vector2(payload.get("origin", Vector2.ZERO)), float(payload.get("direction", 0.0)))
 		"enemy_defeat":
 			return register_enemy_defeat(String(payload.get("enemy_id", "")), int(payload.get("peer_id", 0)), payload)
+		"secret_discovered":
+			return discover_secret(String(payload.get("secret_id", "")), int(payload.get("peer_id", 0)), payload)
 		"finish":
 			var before_count := _finish_peers.size()
 			var was_finished := is_finished()
@@ -407,6 +542,11 @@ func _open_gate_barrier(gate_id: String) -> void:
 func _on_enemy_defeated(enemy_id: String, peer_id: int) -> void:
 	if _is_world_authority():
 		publish_world_event("enemy_defeat", {"enemy_id": enemy_id, "peer_id": peer_id})
+
+
+func _on_secret_discovered(secret_id: String, peer_id: int) -> void:
+	if _is_world_authority():
+		publish_world_event("secret_discovered", {"secret_id": secret_id, "peer_id": peer_id})
 
 
 func _on_enemy_player_hit(_enemy_id: String, peer_id: int) -> void:

@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://world/breakable_bramble.gd" id="1_bramble"]
+[ext_resource type="Texture2D" path="res://art/objects/cracked_bramble.svg" id="2_art"]
+
+[sub_resource type="RectangleShape2D" id="BrambleShape"]
+size = Vector2(64, 80)
+
+[node name="BreakableBramble" type="Area2D" groups=["bramble"]]
+script = ExtResource("1_bramble")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("BrambleShape")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="BrambleArt" type="Sprite2D" parent="Visual"]
+texture = ExtResource("2_art")

@@ -18,6 +18,8 @@ func _run() -> void:
 		return
 	if not await _test_offline_second_player_held_action_survives_physics_cleanup():
 		return
+	if not await _test_secret_discovery_awards_once_and_advances_combo():
+		return
 	quit(0)
 
 
@@ -145,6 +147,34 @@ func _test_spread_is_atomic_and_consumes_one_charge() -> bool:
 		return _fail_bool("failed spread must release partial members and preserve its charge")
 	if level.last_world_event_sequence() != sequence_before or level._next_world_event_sequence != sequence_before:
 		return _fail_bool("rejected spread must not advance or expose a client world-event sequence")
+	level.queue_free()
+	await process_frame
+	return true
+
+
+## A secret discovery must award score once, advance the combo, and reject a
+## duplicate discovery of the same secret id.
+func _test_secret_discovery_awards_once_and_advances_combo() -> bool:
+	var level = await _make_level()
+	var score_before: int = level.team_score.total
+	if not level.discover_secret("test-secret", 1):
+		return _fail_bool("first secret discovery must succeed")
+	if level.discover_secret("test-secret", 2):
+		return _fail_bool("duplicate secret discovery must be rejected")
+	if level.discovered_secret_count() != 1:
+		return _fail_bool("discovered secret count must be exactly one")
+	if level.team_score.total <= score_before:
+		return _fail_bool("secret discovery must award score")
+	if level.team_combo.remaining <= 0.0:
+		return _fail_bool("secret discovery must start the combo window")
+	# A second distinct secret must receive the previewed multiplier.
+	var preview_before: int = level.team_combo.preview_multiplier()
+	if preview_before <= 1:
+		return _fail_bool("combo preview must offer a multiplier after the first discovery")
+	if not level.discover_secret("test-secret-2", 2):
+		return _fail_bool("second distinct secret discovery must succeed")
+	if level.team_combo.multiplier < preview_before:
+		return _fail_bool("second secret discovery must commit the previewed combo multiplier")
 	level.queue_free()
 	await process_frame
 	return true

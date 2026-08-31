@@ -13,6 +13,12 @@ const BubbleInventoryScript := preload("res://player/bubble_inventory.gd")
 ## Campaign identifier for this level; set on the scene root.
 @export var level_id: String = ""
 
+## Entity budgets for performance gating. Defaults match the shared campaign
+## ceiling; individual levels may override in their scene or script.
+@export var enemy_budget: int = 12
+@export var projectile_budget: int = 24
+@export var particle_budget: int = 80
+
 var coop_mode: RefCounted = null
 var team_score: RefCounted = null
 var team_combo: RefCounted = null
@@ -125,7 +131,8 @@ func _with_authoritative_combo_score(payload: Dictionary, teamwork: bool = false
 
 
 ## Applies a host-carried score and combo result. Validate the compact combo
-## outcome before changing score; full rich restore atomicity remains Task 8.
+## outcome before changing score; rich restore atomicity is implemented in
+## SunnyForest.restore_world_state (validation-before-mutation, protocol 2).
 func _award_authoritative_score(event_id: String, category: String, payload: Dictionary) -> int:
 	var multiplier_value: Variant = payload.get("score_multiplier", null)
 	var combo_value: Variant = payload.get("combo_state", null)
@@ -179,7 +186,7 @@ func _checkpoint_position(checkpoint_id: String) -> Vector2:
 
 
 func _on_coop_level_completed(completed_level_id: String) -> void:
-	finish_level({
+	var payload := {
 		"mode": "coop",
 		"level_id": completed_level_id,
 		"next_level_id": next_campaign_level(completed_level_id),
@@ -189,7 +196,15 @@ func _on_coop_level_completed(completed_level_id: String) -> void:
 		"scores": {},
 		"team_score": team_score.total,
 		"stars_collected": _collected_stars,
-	})
+	}
+	payload.merge(_completion_payload_extras(), true)
+	finish_level(payload)
+
+
+## Override to add level-specific completion fields without changing the shared
+## results-screen contract.
+func _completion_payload_extras() -> Dictionary:
+	return {}
 
 
 func _on_coop_campaign_completed(unlocked_levels: Array) -> void:

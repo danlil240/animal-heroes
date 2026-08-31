@@ -14,6 +14,9 @@ func _run() -> void:
 	passed = camera_binding_passed and passed
 	passed = _test_camera_feedback_look_ahead_and_impulse_cap() and passed
 	passed = _test_hero_visual_reveals_speed_streak_above_top_tier() and passed
+	passed = _test_secret_trigger_idempotency_and_restore() and passed
+	passed = _test_coop_secret_requires_two_distinct_peers_within_window() and passed
+	passed = _test_breakable_bramble_only_active_bubble_breaks_once() and passed
 	quit(0 if passed else 1)
 
 
@@ -200,6 +203,139 @@ func _test_hero_visual_reveals_speed_streak_above_top_tier() -> bool:
 	hero.remove_child(visual)
 	visual.free()
 	hero.free()
+	return true
+
+
+## A single-pad secret must discover once for a valid peer, reject a second
+## discovery, and remain idempotent after a snapshot round trip.
+func _test_secret_trigger_idempotency_and_restore() -> bool:
+	var trigger_script = load("res://world/secret_trigger.gd")
+	if trigger_script == null:
+		_fail("secret trigger script must exist")
+		return false
+	var trigger = trigger_script.new()
+	trigger.secret_id = "momentum-carrot"
+	if not trigger.discover(1):
+		_fail("first discovery must succeed")
+		return false
+	if trigger.discover(2):
+		_fail("same secret must not discover twice")
+		return false
+	if trigger.discover(1):
+		_fail("repeat discovery by the same peer must not re-discover")
+		return false
+	var restored = trigger_script.new()
+	restored.secret_id = "momentum-carrot"
+	if not restored.restore_state(trigger.snapshot_state()):
+		_fail("restored discovery must restore from a valid snapshot")
+		return false
+	if restored.discover(1):
+		_fail("restored discovery must remain idempotent")
+		return false
+	var mismatch = trigger_script.new()
+	mismatch.secret_id = "combat-carrot"
+	if mismatch.restore_state(trigger.snapshot_state()):
+		_fail("restore must reject a snapshot whose secret id does not match")
+		return false
+	var empty = trigger_script.new()
+	empty.secret_id = ""
+	if empty.discover(1):
+		_fail("a secret with an empty id must not discover")
+		return false
+	if empty.discover(3):
+		_fail("a secret must only accept peer 1 or 2")
+		return false
+	trigger.free()
+	restored.free()
+	mismatch.free()
+	empty.free()
+	return true
+
+
+## A co-op secret must require two distinct peers within the one-second window
+## and reject a second activation from the same peer or a late second peer.
+func _test_coop_secret_requires_two_distinct_peers_within_window() -> bool:
+	var trigger_script = load("res://world/secret_trigger.gd")
+	if trigger_script == null:
+		_fail("secret trigger script must exist")
+		return false
+	var trigger = trigger_script.new()
+	trigger.secret_id = "coop-carrot"
+	trigger.coop_activation = true
+	if trigger.discover(1):
+		_fail("co-op secret must not complete on a single peer activation")
+		return false
+	if trigger.discover(1):
+		_fail("co-op secret must reject a duplicate same-peer activation")
+		return false
+	if not trigger.discover(2):
+		_fail("co-op secret must complete when the second distinct peer activates in time")
+		return false
+	if trigger.discover(1):
+		_fail("completed co-op secret must remain idempotent")
+		return false
+	# A late second peer must not complete the secret.
+	var late = trigger_script.new()
+	late.secret_id = "coop-carrot-late"
+	late.coop_activation = true
+	late.discover(1)
+	late.host_step(1.01)
+	if late.discover(2):
+		_fail("co-op secret must expire after the one-second window")
+		return false
+	trigger.free()
+	late.free()
+	return true
+
+
+## A bramble must break only for an active basic or spread bubble, emit broken
+## once, and reject repeat hits and non-bubble actors.
+func _test_breakable_bramble_only_active_bubble_breaks_once() -> bool:
+	var bramble_script = load("res://world/breakable_bramble.gd")
+	if bramble_script == null:
+		_fail("breakable bramble script must exist")
+		return false
+	var bramble = bramble_script.new()
+	bramble.bramble_id = "grove-bramble"
+	var bubble_script = load("res://world/bubble_projectile.gd")
+	var bubble = bubble_script.new()
+	bubble.active = true
+	bubble.projectile_kind = "basic"
+	var broken_counter := {"count": 0}
+	bramble.broken.connect(func(_id: String, _peer: int) -> void: broken_counter["count"] += 1)
+	if not bramble.try_projectile(bubble):
+		_fail("an active basic bubble must break the bramble")
+		return false
+	if bramble.try_projectile(bubble):
+		_fail("a repeat hit must not break the bramble again")
+		return false
+	if int(broken_counter["count"]) != 1:
+		_fail("broken must emit exactly once")
+		return false
+	var spread = bubble_script.new()
+	spread.active = true
+	spread.projectile_kind = "spread"
+	if bramble.try_projectile(spread):
+		_fail("an already-broken bramble must reject a spread bubble")
+		return false
+	var inactive = bubble_script.new()
+	inactive.active = false
+	inactive.projectile_kind = "basic"
+	var fresh = bramble_script.new()
+	fresh.bramble_id = "fresh-bramble"
+	if fresh.try_projectile(inactive):
+		_fail("an inactive bubble must not break a bramble")
+		return false
+	var non_bubble = Node2D.new()
+	if fresh.try_projectile(non_bubble):
+		_fail("a non-bubble node must not break a bramble")
+		return false
+	bramble.free()
+	bubble.free()
+	spread.free()
+	inactive.free()
+	fresh.free()
+	non_bubble.free()
 	return true
 
 

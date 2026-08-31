@@ -295,6 +295,24 @@ func _evaluate_assertion(a: Dictionary) -> void:
 			var ammo: Variant = _level.get("bubble_ammo")
 			passed = int(ammo.remaining(peer_id)) == int(args[1])
 			message = "peer %d ammo=%d == %d" % [peer_id, int(ammo.remaining(peer_id)), int(args[1])]
+		"active_projectiles_lte":
+			var count := 0
+			if _level.has_method("active_bubble_count"):
+				count = _level.active_bubble_count()
+			passed = count <= int(args[0])
+			message = "active_projectiles=%d <= %d" % [count, int(args[0])]
+		"secrets_eq":
+			var found := 0
+			if _level.has_method("discovered_secret_count"):
+				found = _level.discovered_secret_count()
+			passed = found == int(args[0])
+			message = "secrets_found=%d == %d" % [found, int(args[0])]
+		"combo_lte":
+			var mult := 1
+			if _level.get("team_combo") != null:
+				mult = int(_level.get("team_combo").multiplier)
+			passed = mult <= int(args[0])
+			message = "combo=%d <= %d" % [mult, int(args[0])]
 		_:
 			passed = false
 			message = "unknown assertion kind: %s" % kind

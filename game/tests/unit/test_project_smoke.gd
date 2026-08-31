@@ -4,9 +4,9 @@ func _init() -> void:
 	var config := load("res://core/game_config.gd")
 	var build_info := load("res://core/build_info.gd")
 	if build_info == null or build_info.current() != {
-		"version_name": "1.0.0-dev.1",
-		"version_code": 1,
-		"application_protocol_version": 1,
+		"version_name": "1.0.0-dev.2",
+		"version_code": 2,
+		"application_protocol_version": 2,
 		"save_schema_version": 1,
 	}:
 		push_error("build_info contract missing")

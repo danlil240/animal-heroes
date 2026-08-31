@@ -55,6 +55,7 @@ text = "♥♥♥♥"
 horizontal_alignment = 2
 
 [node name="Ammo" type="VBoxContainer" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -96,6 +97,78 @@ text = "◯"
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "◯"
+
+[node name="Power" type="HBoxContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -154.0
+offset_top = -214.0
+offset_right = -24.0
+offset_bottom = -164.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/separation = 6
+
+[node name="Icon" type="Label" parent="Power"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.61, 0.91, 1, 1)
+theme_override_colors/font_outline_color = Color(0.09, 0.16, 0.29, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 26
+text = "✺"
+
+[node name="Count" type="Label" parent="Power"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.61, 0.91, 1, 1)
+theme_override_colors/font_outline_color = Color(0.09, 0.16, 0.29, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 26
+text = "0"
+
+[node name="Combo" type="Label" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -40.0
+offset_top = 82.0
+offset_right = 40.0
+offset_bottom = 124.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.83, 0.24, 1)
+theme_override_colors/font_outline_color = Color(0.09, 0.16, 0.29, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 36
+text = "×2"
+horizontal_alignment = 1
+pivot_offset = Vector2(40, 20)
+
+[node name="Secrets" type="Label" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -154.0
+offset_top = -150.0
+offset_right = -24.0
+offset_bottom = -110.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.95, 0.82, 0.31, 1)
+theme_override_colors/font_outline_color = Color(0.09, 0.16, 0.29, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 24
+text = "0/3"
+horizontal_alignment = 2
 
 [node name="Context" type="PanelContainer" parent="."]
 custom_minimum_size = Vector2(64, 64)
